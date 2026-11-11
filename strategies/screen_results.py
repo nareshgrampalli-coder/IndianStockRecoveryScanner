@@ -15,6 +15,29 @@ MATCHERS = {
 }
 
 
+def matching_rows(candidates: pd.DataFrame, strategy: str) -> pd.DataFrame:
+    """Return candidate rows that satisfy one strategy's implemented conditions."""
+    try:
+        matcher = MATCHERS[strategy]
+    except KeyError as exc:
+        raise ValueError(f"Unknown strategy: {strategy}") from exc
+
+    matched = []
+    for row in candidates.to_dict("records"):
+        rule_row = dict(row)
+        rule_row["52_week_high"] = row.get("price_high_1y")
+        if strategy == "strategy_4":
+            rule_row["macd_bullish"] = (
+                str(row.get("macd_bullish", "")).strip().lower() == "true"
+            )
+            rule_row["above_sma20"] = (
+                str(row.get("above_sma20", "")).strip().lower() == "true"
+            )
+        if matcher(rule_row):
+            matched.append(row)
+    return pd.DataFrame(matched, columns=candidates.columns)
+
+
 def write_strategy_results(
     candidates: pd.DataFrame, output_dir: str | Path
 ) -> dict[str, Path]:
@@ -23,22 +46,8 @@ def write_strategy_results(
     output_dir.mkdir(parents=True, exist_ok=True)
     results = {}
 
-    for strategy, matcher in MATCHERS.items():
-        matched = []
-        for row in candidates.to_dict("records"):
-            rule_row = dict(row)
-            rule_row["52_week_high"] = row.get("price_high_1y")
-            if strategy == "strategy_4":
-                rule_row["macd_bullish"] = (
-                    str(row.get("macd_bullish", "")).strip().lower() == "true"
-                )
-                rule_row["above_sma20"] = (
-                    str(row.get("above_sma20", "")).strip().lower() == "true"
-                )
-            if matcher(rule_row):
-                matched.append(row)
-
-        result = pd.DataFrame(matched, columns=candidates.columns)
+    for strategy in MATCHERS:
+        result = matching_rows(candidates, strategy)
         result["strategy_rule"] = strategy
         path = output_dir / f"{strategy}_results.csv"
         result.to_csv(path, index=False)

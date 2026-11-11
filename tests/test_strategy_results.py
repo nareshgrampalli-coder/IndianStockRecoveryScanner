@@ -1,10 +1,12 @@
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
 
+from screen_strategy import run
 from strategies.screen_results import write_strategy_results
 
 
@@ -64,6 +66,43 @@ class StrategyResultTests(unittest.TestCase):
         self.assertTrue(
             (results["strategy_4"]["strategy_rule"] == "strategy_4").all()
         )
+
+    def test_single_strategy_command_writes_only_selected_matches(self):
+        source_rows = pd.DataFrame([{
+            "symbol": "STRONG",
+            "name": "Strong Company",
+            "isin": pd.NA,
+            "market_cap": 2000,
+            "roce": 20,
+            "roe": 18,
+            "debt_equity": 0.3,
+            "sales_growth": 15,
+            "profit_growth": 15,
+            "operating_cash_flow": 10,
+            "pe": 20,
+            "financial_basis": "consolidated",
+        }])
+        universe = pd.DataFrame([{
+            "symbol": "STRONG",
+            "isin": "INE123A01016",
+            "nifty_name": "Strong Company",
+        }])
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            input_path = Path(temp_dir) / "strategy1.csv"
+            input_path.write_text("placeholder", encoding="utf-8")
+            output_path = Path(temp_dir) / "results" / "strategy_1_results.csv"
+            with patch("screen_strategy.read_screener", return_value=source_rows), \
+                    patch("screen_strategy.NSEProvider") as nse_provider:
+                nse_provider.return_value.nifty500.return_value = universe
+                result_path = run(
+                    "strategy_1", input_path, output_path, "missing-settings.yaml"
+                )
+            result = pd.read_csv(result_path)
+
+        self.assertEqual(result["symbol"].tolist(), ["STRONG"])
+        self.assertEqual(result["isin"].tolist(), ["INE123A01016"])
+        self.assertEqual(result["strategy_rule"].tolist(), ["strategy_1"])
 
 
 if __name__ == "__main__":

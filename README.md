@@ -36,6 +36,21 @@ The script downloads the Nifty 500 constituents and available Yahoo Finance pric
 
 The legacy command `python screening_workflow.py` accepts the same arguments.
 
+### Run one strategy separately
+
+To evaluate and export just one strategy, use `screen_strategy.py` with that strategy's consolidated Screener CSV. The command writes only matching companies to the requested CSV. It still needs internet access to map companies against the current Nifty 500 list; Strategies 2–4 also fetch Yahoo Finance history for their price/technical conditions.
+
+For example, run Strategy 3 by itself:
+
+```powershell
+python screen_strategy.py `
+  --strategy strategy_3 `
+  --input data\inputs\strategy3.csv `
+  --output strategy_results\strategy_3_results.csv
+```
+
+Use `strategy_1`, `strategy_2`, `strategy_3`, or `strategy_4` for `--strategy`. Strategy 1 uses the financial fields from its input; Strategies 2 and 3 additionally need market price and 52-week high data from Yahoo; Strategy 4 needs RSI, MACD, moving-average, and volume data. The output folder is created automatically. For all four CSVs in one run, use the `python app.py` command above.
+
 Each Screener CSV must explicitly identify every row as `Consolidated` using a `Statement Type` or `Financial Basis` column. Standalone or unspecified statements are rejected. Include `Financial Period` and `Publication Date` as separate columns for point-in-time backtests; rows without parseable dates are excluded from those backtests. Other metric columns may be absent, but missing values are flagged and remain unscored.
 
 Runtime settings, including history periods, worker count, security mapping path, and SQLite path, are in `config/settings.yaml`.
