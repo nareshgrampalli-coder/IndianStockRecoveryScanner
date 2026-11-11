@@ -24,6 +24,27 @@ Use company filings and exchange-published information as authoritative sources 
 | Screener.in | Limited | Excellent | Limited | Fundamental research |
 | Yahoo Finance | Good | Inconsistent | Calculate yourself | Development/testing |
 
+## 3. Data sources mapped to your four strategies
+
+| Data requirement | Recommended source |
+|---|---|
+| Nifty 500 membership | NSE Indices |
+| Current price | Dhan / Upstox |
+| 5-year daily OHLCV | Dhan / Upstox |
+| 52-week high/low | NSE + historical prices |
+| ROCE / ROE | Screener CSV / filings |
+| Quarterly sales growth | NSE / BSE filings |
+| Quarterly PAT growth | NSE / BSE filings |
+| Debt/equity | Financial statements |
+| Operating cash flow | Annual reports / financial statements |
+| PE ratio | NSE + calculated PE |
+| Promoter holding | NSE / BSE filings |
+| Promoter pledging | NSE / BSE filings |
+| RSI / MACD / ADX | Python calculations |
+| Moving averages | Python calculations |
+| Delivery percentage | NSE reports |
+| Bulk and block deals | NSE reports |
+
 ## Screening workflow
 
 ```text
