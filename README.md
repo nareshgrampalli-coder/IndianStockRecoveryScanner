@@ -10,23 +10,35 @@ This tool combines four Screener.in CSV exports into a deduplicated Nifty 500 wa
 - The constituent list and market data require an internet connection. Yahoo Finance coverage or rate limits can leave individual technical metrics unavailable.
 - Screener fundamental values and Yahoo technicals may have different as-of dates; see each workbook row's `price_asof` and the scoring/sources sheet.
 
-## Setup and run
+## Generate `screening_results.xlsx`
 
-Use Python 3.10 or newer:
+Run the following from the repository root in PowerShell. Activate the existing virtual environment first; keep using this terminal for the commands in this guide.
 
 ```powershell
+.\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
+```
+
+Prepare four Screener.in CSV exports, one for each strategy. Each export must include a `Statement Type` or `Financial Basis` column whose rows are all `Consolidated`; include a `Symbol` (or company name) column and whatever financial metrics are available. For example, save them as `data\inputs\strategy1.csv` through `data\inputs\strategy4.csv`.
+
+Generate the workbook:
+
+```powershell
 python app.py `
-  --strategy-1 path\to\strategy1.csv `
-  --strategy-2 path\to\strategy2.csv `
-  --strategy-3 path\to\strategy3.csv `
-  --strategy-4 path\to\strategy4.csv `
+  --strategy-1 data\inputs\strategy1.csv `
+  --strategy-2 data\inputs\strategy2.csv `
+  --strategy-3 data\inputs\strategy3.csv `
+  --strategy-4 data\inputs\strategy4.csv `
   --output screening_results.xlsx
 ```
 
+The script downloads the Nifty 500 constituents and available Yahoo Finance price history, then writes the workbook to the path given by `--output` (default: `screening_results.xlsx`). It contains `Ranked Watchlist`, `Top 15 Research`, `Combined Screen Imports`, `Nifty 500 Universe`, and `Scoring & Sources` sheets. The first run requires internet access; unavailable prices are recorded per stock. To see all options, run `python app.py --help`.
+
+The legacy command `python screening_workflow.py` accepts the same arguments.
+
 Each Screener CSV must explicitly identify every row as `Consolidated` using a `Statement Type` or `Financial Basis` column. Standalone or unspecified statements are rejected. Include `Financial Period` and `Publication Date` as separate columns for point-in-time backtests; rows without parseable dates are excluded from those backtests. Other metric columns may be absent, but missing values are flagged and remain unscored.
 
-The same screening command is available through the backward-compatible `screening_workflow.py` entry point. Run either command with `--help` for all options. Runtime settings, including history periods, worker count, security mapping path, and SQLite path, are in `config/settings.yaml`.
+Runtime settings, including history periods, worker count, security mapping path, and SQLite path, are in `config/settings.yaml`.
 
 ## Full-universe ingestion
 
@@ -49,8 +61,6 @@ The Bhavcopy argument is optional; when provided, the CSV must contain ISIN, tra
 - `normalized_data/ingestion_errors.csv`: per-symbol download or normalization errors.
 
 It also persists security mappings, price bars, and consolidated financial observations in the SQLite database configured in `config/settings.yaml` (default: `data/screening.sqlite3`). Yahoo Finance is the currently configured history adapter; see [the architecture guide](docs/architecture.md) for DhanHQ prerequisites and data-source limitations.
-
-The workbook contains `Ranked Watchlist`, `Top 15 Research`, `Combined Screen Imports`, `Nifty 500 Universe`, and `Scoring & Sources` sheets. Strategy membership and flags are retained for each stock: Strategy 3 is the primary screen, Strategy 1 the quality filter, Strategy 4 the entry-timing filter, and Strategy 2 the deep-value list. Combined score determines ranking, with these strategy flags used as tie-breakers. The first 15 ranked stocks are a research shortlist, not a buy recommendation.
 
 ## Local web pages
 
