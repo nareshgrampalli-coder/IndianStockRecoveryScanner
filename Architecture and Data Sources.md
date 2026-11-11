@@ -12,6 +12,28 @@
 
 Use company filings and exchange-published information as authoritative sources where available. Treat third-party APIs as delivery mechanisms, record data timestamps and provenance, and account for provider terms, coverage, and rate limits.
 
+## Final source recommendation
+
+| Component | Recommended source |
+|---|---|
+| Historical prices | DhanHQ |
+| Price validation | NSE Bhavcopy |
+| Company universe | NSE Indices |
+| Financial statements | Screener CSV initially |
+| Official financial validation | NSE / BSE |
+| Technical indicators | Python |
+| Database | PostgreSQL / Supabase |
+| Dashboard | React / Vercel |
+| Development | VS Code + GitHub Copilot |
+
+Start with daily end-of-day data for all 500 companies rather than live streaming. For a 6–12 month investment horizon, reliable daily prices and quarterly financials are more useful than expensive real-time feeds. Keep provider interfaces independent so sources can be replaced without changing strategy logic.
+
+The current SQLite ingestion pipeline uses Yahoo Finance as its executable historical-price adapter because it supplies adjusted close for corporate-action adjustment. DhanHQ remains the recommended production source, but needs account credentials, an ISIN-to-Dhan instrument mapping, and a verified corporate-action adjustment policy before it can safely replace the current adapter. NSE Bhavcopy validation is supported through a same-session CSV input.
+
+## Normalized ingestion
+
+Run `python ingest_data.py` with the four consolidated Screener exports to download the Nifty 500 universe and daily history for every constituent. It writes `normalized_stocks.csv`, `normalized_daily_prices.csv`, and `ingestion_errors.csv`, and persists ISIN mappings, price bars, and consolidated financial observations in SQLite. An optional `--bhavcopy-csv` argument compares same-session raw closes with NSE Bhavcopy; differences above 0.5% are flagged for review.
+
 ## 2. Data source comparison
 
 | Source | Price history | Fundamentals | Technical data | Recommendation |

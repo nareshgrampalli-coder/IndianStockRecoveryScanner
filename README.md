@@ -26,6 +26,22 @@ python app.py `
 
 The same command-line interface remains available through `screening_workflow.py`. Settings such as the universe URL, history period, and worker count are in `config/settings.yaml`.
 
+## Full-universe ingestion
+
+To normalize the full Nifty 500 universe, four consolidated fundamental exports, and daily history:
+
+```powershell
+python ingest_data.py `
+  --strategy-1 path\to\strategy1.csv `
+  --strategy-2 path\to\strategy2.csv `
+  --strategy-3 path\to\strategy3.csv `
+  --strategy-4 path\to\strategy4.csv `
+  --output-dir normalized_data `
+  --bhavcopy-csv path\to\nse_bhavcopy.csv
+```
+
+The Bhavcopy argument is optional. The job writes normalized stock and daily-price CSVs plus an ingestion-error report, and persists the data in SQLite. Yahoo Finance is the currently configured history adapter; the architecture document records the remaining DhanHQ credentials, instrument mapping, and corporate-action verification required for production use.
+
 The workbook contains `Ranked Watchlist`, `Top 15 Research`, `Combined Screen Imports`, `Nifty 500 Universe`, and `Scoring & Sources` sheets. Strategy membership and flags are retained for each stock: Strategy 3 is the primary screen, Strategy 1 the quality filter, Strategy 4 the entry-timing filter, and Strategy 2 the deep-value list. Combined score determines ranking, with these strategy flags used as tie-breakers. The first 15 ranked stocks are a research shortlist, not a buy recommendation.
 
 ## Project modules

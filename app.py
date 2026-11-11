@@ -10,6 +10,7 @@ import sys
 
 import pandas as pd
 
+from config.runtime import load_settings
 from data_processing.corporate_actions import apply_adjustments
 from data_processing.data_validator import validate_prices
 from data_processing.financial_cleaner import normalize_company
@@ -28,31 +29,6 @@ from scoring.fundamental_score import score_fundamentals
 from scoring.technical_score import score_technicals
 
 STRATEGIES = ("strategy_1", "strategy_2", "strategy_3", "strategy_4")
-DEFAULTS = {
-    "universe_url": "https://www.niftyindices.com/IndexConstituent/ind_nifty500list.csv",
-    "request_timeout_seconds": 30,
-    "technical_workers": 5,
-    "history_period": "1y",
-    "database_path": "data/screening.sqlite3",
-    "security_master_path": "config/stock_universe.csv",
-}
-
-
-def load_settings(path: Path) -> dict:
-    settings = DEFAULTS.copy()
-    if not path.exists():
-        return settings
-    for line in path.read_text(encoding="utf-8").splitlines():
-        line = line.split("#", 1)[0].strip()
-        if not line or ":" not in line:
-            continue
-        key, value = (part.strip().strip("\"'") for part in line.split(":", 1))
-        if key in settings:
-            default = settings[key]
-            settings[key] = type(default)(value)
-    return settings
-
-
 def technicals_for(symbol: str, provider: YahooProvider) -> tuple[dict, list[dict]]:
     try:
         history = clean_prices(provider.history(symbol))

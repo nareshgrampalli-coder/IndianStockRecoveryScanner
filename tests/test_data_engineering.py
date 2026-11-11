@@ -11,6 +11,13 @@ from backtesting.strategy_backtester import (
     point_in_time_fundamentals,
 )
 from data_processing.corporate_actions import apply_adjustments
+from data_processing.ingestion import (
+    combine_strategy_exports,
+    load_nse_bhavcopy,
+    normalize_price_history,
+    run_ingestion,
+    validate_latest_prices,
+)
 from data_sources.screener_importer import read_screener
 from database.models import FundamentalObservation, PriceBar, SecurityMapping
 from database.repository import ScreeningRepository
@@ -140,6 +147,144 @@ class DataEngineeringTests(unittest.TestCase):
                 financial,
                 ("2023-12-31", "2024-02-01", "consolidated", "Screener.in"),
             )
+
+    def test_ingestion_normalizes_all_strategy_memberships_and_missing_values(self):
+        universe = pd.DataFrame([
+            {
+                "isin": "INE000A01000", "symbol": "ABC", "nse_symbol": "ABC",
+                "bse_symbol": pd.NA, "nifty_name": "ABC Ltd",
+            },
+            {
+                "isin": "INE000B01000", "symbol": "XYZ", "nse_symbol": "XYZ",
+                "bse_symbol": pd.NA, "nifty_name": "XYZ Ltd",
+            },
+        ])
+        with tempfile.TemporaryDirectory() as temp_dir:
+            paths = {}
+            for index, strategy in enumerate(
+                ("strategy_1", "strategy_2", "strategy_3", "strategy_4"), 1
+            ):
+                path = Path(temp_dir) / f"{strategy}.csv"
+                pd.DataFrame([{
+                    "Symbol": "ABC", "ISIN": "INE000A01000",
+                    "Statement Type": "Consolidated",
+                    "Financial Period": "2023-12-31",
+                    "Publication Date": "2024-02-01",
+                    "ROCE": 20,
+                }]).to_csv(path, index=False)
+                paths[strategy] = path
+            stocks = combine_strategy_exports(universe, paths).set_index("isin")
+        self.assertEqual(len(stocks), 2)
+        self.assertTrue(all(
+            stocks.loc["INE000A01000", f"{strategy}_member"]
+            for strategy in ("strategy_1", "strategy_2", "strategy_3", "strategy_4")
+        ))
+        self.assertEqual(stocks.loc["INE000A01000", "roce"], 20)
+        self.assertTrue(pd.isna(stocks.loc["INE000A01000", "roe"]))
+        self.assertEqual(stocks.loc["INE000B01000", "financial_data_quality_score"], 0)
+        self.assertIn("roce", stocks.loc["INE000B01000", "financial_data_missing_fields"])
+
+    def test_ingestion_prices_and_same_session_bhavcopy_validation(self):
+        index = pd.to_datetime(["2024-01-02", "2024-01-03"])
+        history = pd.DataFrame({
+            "Open": [100, 101], "High": [102, 103], "Low": [99, 100],
+            "Close": [101, 102], "Adj Close": [50.5, 51], "Volume": [1000, 1100],
+        }, index=index)
+        prices, bars = normalize_price_history(
+            "INE000A01000", "ABC", history, "test provider",
+            "2024-01-04T00:00:00+00:00",
+        )
+        self.assertEqual(len(bars), 2)
+        self.assertEqual(prices.iloc[-1]["raw_close"], 102)
+        self.assertEqual(prices.iloc[-1]["adjusted_close"], 51)
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "bhavcopy.csv"
+            pd.DataFrame([{
+                "ISIN": "INE000A01000", "TradDt": "2024-01-03", "ClsPric": 102,
+            }]).to_csv(path, index=False)
+            bhavcopy = load_nse_bhavcopy(path)
+        stocks = pd.DataFrame([{"isin": "INE000A01000"}])
+        validated = validate_latest_prices(stocks, prices.reset_index(drop=True), bhavcopy)
+        self.assertEqual(validated.loc[0, "price_validation_status"], "MATCH")
+        self.assertEqual(validated.loc[0, "price_validation_diff_pct"], 0)
+
+    def test_ingestion_run_emits_full_universe_and_persists_history(self):
+        class FakeUniverse:
+            def nifty500(self):
+                return pd.DataFrame([
+                    {
+                        "isin": "INE000A01000", "symbol": "ABC",
+                        "nse_symbol": "ABC", "bse_symbol": pd.NA,
+                        "nifty_name": "ABC Ltd",
+                    },
+                    {
+                        "isin": "INE000B01000", "symbol": "XYZ",
+                        "nse_symbol": "XYZ", "bse_symbol": pd.NA,
+                        "nifty_name": "XYZ Ltd",
+                    },
+                ])
+
+        class FakePrices:
+            name = "Test EOD provider"
+
+            def history(self, symbol):
+                index = pd.date_range("2024-01-02", periods=3)
+                close = [100.0, 101.0, 102.0] if symbol == "ABC" else [50.0, 51.0, 52.0]
+                return pd.DataFrame({
+                    "Open": close,
+                    "High": [value + 1 for value in close],
+                    "Low": [value - 1 for value in close],
+                    "Close": close,
+                    "Adj Close": [value * 0.9 for value in close],
+                    "Volume": [1000, 1100, 1200],
+                }, index=index)
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            mapping = root / "mapping.csv"
+            mapping.write_text(
+                "isin,company_name,nse_symbol,bse_symbol\n", encoding="utf-8"
+            )
+            paths = {}
+            for index in range(1, 5):
+                strategy = f"strategy_{index}"
+                path = root / f"{strategy}.csv"
+                pd.DataFrame([{
+                    "Symbol": "ABC", "ISIN": "INE000A01000",
+                    "Statement Type": "Consolidated",
+                    "Financial Period": "2023-12-31",
+                    "Publication Date": "2024-01-05",
+                    "ROCE": 20,
+                }]).to_csv(path, index=False)
+                paths[strategy] = path
+            database = root / "screening.sqlite3"
+            outputs = run_ingestion(
+                FakeUniverse(), FakePrices(), paths,
+                {
+                    "security_master_path": str(mapping),
+                    "technical_workers": 2,
+                    "database_path": str(database),
+                },
+                root / "normalized",
+            )
+            stocks = pd.read_csv(outputs["stocks"])
+            prices = pd.read_csv(outputs["prices"])
+            self.assertEqual(len(stocks), 2)
+            self.assertEqual(len(prices), 6)
+            no_financials = stocks.loc[stocks["isin"] == "INE000B01000"].iloc[0]
+            self.assertEqual(no_financials["financial_data_quality_score"], 0)
+            self.assertIn("roce", no_financials["financial_data_missing_fields"])
+            with closing(sqlite3.connect(database)) as connection:
+                self.assertEqual(
+                    connection.execute("SELECT COUNT(*) FROM price_bars").fetchone()[0], 6
+                )
+                self.assertEqual(
+                    connection.execute(
+                        "SELECT COUNT(*) FROM fundamental_observations"
+                    ).fetchone()[0],
+                    1,
+                )
 
 
 if __name__ == "__main__":

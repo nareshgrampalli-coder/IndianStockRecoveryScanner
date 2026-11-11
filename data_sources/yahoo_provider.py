@@ -5,6 +5,8 @@ import yfinance as yf
 
 
 class YahooProvider:
+    name = "Yahoo Finance"
+
     def __init__(self, period: str = "1y", timeout: int = 20):
         self.period, self.timeout = period, timeout
 
