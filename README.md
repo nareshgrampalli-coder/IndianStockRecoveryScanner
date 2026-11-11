@@ -46,10 +46,10 @@ To normalize the full Nifty 500 universe, four consolidated fundamental exports,
 
 ```powershell
 python ingest_data.py `
-  --strategy-1 path\to\strategy1.csv `
-  --strategy-2 path\to\strategy2.csv `
-  --strategy-3 path\to\strategy3.csv `
-  --strategy-4 path\to\strategy4.csv `
+  --strategy-1 data\inputs\strategy1.csv `
+  --strategy-2 data\inputs\strategy2.csv `
+  --strategy-3 data\inputs\strategy3.csv `
+  --strategy-4 data\inputs\strategy4.csv `
   --output-dir normalized_data `
   --bhavcopy-csv path\to\nse_bhavcopy.csv
 ```
