@@ -10,10 +10,23 @@ from unittest.mock import patch
 import numpy as np
 import pandas as pd
 
-from app import run
+from app import main, run
 
 
 class ScreeningRunTests(unittest.TestCase):
+    def test_main_accepts_one_shared_fundamentals_export(self):
+        with patch("app.run", return_value=Path("screening_results.xlsx")) as run_screen:
+            result = main([
+                "--fundamentals-csv", "data/inputs/fundamentals.csv",
+                "--output", "screening_results.xlsx",
+            ])
+
+        self.assertEqual(result, 0)
+        self.assertEqual(
+            run_screen.call_args.args[0].fundamentals_csv,
+            "data/inputs/fundamentals.csv",
+        )
+
     def test_run_writes_five_screens_final_exports_and_historical_snapshot(self):
         class FakeUniverse:
             def nifty500(self):

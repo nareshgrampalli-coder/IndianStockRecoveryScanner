@@ -98,15 +98,21 @@ def technicals_for(symbol: str, provider: YahooProvider) -> tuple[dict, list[dic
 
 def run(args: argparse.Namespace) -> Path:
     settings = load_settings(Path(args.settings))
-    inputs = [Path(getattr(args, name)) for name in STRATEGIES]
-    missing = [str(path) for path in inputs if not path.is_file()]
-    if missing:
-        raise FileNotFoundError("Missing screener export(s): " + ", ".join(missing))
-
-    imports = pd.concat(
-        [read_screener(path, name) for name, path in zip(STRATEGIES, inputs)],
-        ignore_index=True,
-    )
+    fundamentals_csv = getattr(args, "fundamentals_csv", None)
+    if fundamentals_csv:
+        shared_input = Path(fundamentals_csv)
+        if not shared_input.is_file():
+            raise FileNotFoundError(f"Missing consolidated fundamentals CSV: {shared_input}")
+        imports = read_screener(shared_input, STRATEGIES[0])
+    else:
+        inputs = [Path(getattr(args, name)) for name in STRATEGIES]
+        missing = [str(path) for path in inputs if not path.is_file()]
+        if missing:
+            raise FileNotFoundError("Missing screener export(s): " + ", ".join(missing))
+        imports = pd.concat(
+            [read_screener(path, name) for name, path in zip(STRATEGIES, inputs)],
+            ignore_index=True,
+        )
     universe = NSEProvider(
         settings["universe_url"], settings["request_timeout_seconds"]
     ).nifty500()
@@ -307,11 +313,19 @@ def run(args: argparse.Namespace) -> Path:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     for strategy in STRATEGIES:
-        parser.add_argument(f"--{strategy.replace('_', '-')}", dest=strategy, required=True)
+        parser.add_argument(f"--{strategy.replace('_', '-')}", dest=strategy)
+    parser.add_argument(
+        "--fundamentals-csv",
+        help="One consolidated all-stock fundamentals export; all four strategy rules run locally.",
+    )
     parser.add_argument("--output", default="screening_results.xlsx")
     parser.add_argument("--strategy-results-dir", default="strategy_results")
     parser.add_argument("--settings", default="config/settings.yaml")
     args = parser.parse_args(argv)
+    if not args.fundamentals_csv and not all(getattr(args, name) for name in STRATEGIES):
+        parser.error(
+            "provide --fundamentals-csv or all four --strategy-1 through --strategy-4 exports"
+        )
     try:
         output = run(args)
     except Exception as exc:

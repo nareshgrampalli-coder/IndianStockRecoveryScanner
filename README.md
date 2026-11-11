@@ -20,7 +20,10 @@ Run the following from the repository root in PowerShell. Activate the existing 
 python -m pip install -r requirements.txt
 ```
 
-Prepare four Screener.in CSV exports, one for each strategy. Each export must include a `Statement Type` or `Financial Basis` column whose rows are all `Consolidated`; include a `Symbol` (or company name) column and whatever financial metrics are available. For example, save them as `data\inputs\strategy1.csv` through `data\inputs\strategy4.csv`.
+Choose one input workflow:
+
+- **Existing Screener workflow:** prepare four CSV exports, one for each strategy, with a `Statement Type` or `Financial Basis` column whose rows are all `Consolidated`; include a `Symbol` (or company name) column and relevant financial metrics. Save as `data\inputs\strategy1.csv` through `data\inputs\strategy4.csv`.
+- **Free/hybrid workflow:** prepare one broad consolidated fundamentals export as `data\inputs\fundamentals.csv` and use the `--fundamentals-csv` command below. This lets the app apply the four strategy rules locally rather than requiring four strategy-specific exports.
 
 Generate the workbook:
 
@@ -32,6 +35,20 @@ python app.py `
   --strategy-4 data\inputs\strategy4.csv `
   --output screening_results.xlsx
 ```
+
+#### Free/hybrid alternative: one fundamentals export
+
+Instead of maintaining four separate strategy exports, save one consolidated Screener.in export covering a broad set of companies (for example, use the broad filter `Market Capitalization > 0`) as `data\inputs\fundamentals.csv`. Include a Symbol or company name, `Statement Type`/`Financial Basis` marked Consolidated, and the financial columns used by the strategies: market capitalization, ROCE, ROE, debt to equity, 3-year sales and profit growth, 3-year operating cash flow, promoter holding, P/E, and quarterly sales/profit growth for Strategy 4. Include financial period and publication date where available.
+
+Run all four rules locally against this one input (instead of the four-file command above):
+
+```powershell
+python app.py `
+  --fundamentals-csv data\inputs\fundamentals.csv `
+  --output screening_results.xlsx
+```
+
+The application still downloads the Nifty 500 universe and Yahoo Finance prices; it filters the broad fundamentals export to that universe, calculates all four strategy memberships locally, and creates the same workbook and result CSVs. The strategies' own rules (including their market-cap thresholds) are still enforced locally. This cuts the recurring export work from four files to one, but fundamentals remain a manually refreshed Screener export; missing source values are not estimated. The four-file command above remains supported.
 
 The script downloads the Nifty 500 constituents and available Yahoo Finance price history, then writes the workbook to the path given by `--output` (default: `screening_results.xlsx`). The workbook includes `Quality_Correction`, `Deep_Value`, `Recovery_30_50`, `Technical_Reversal`, and `Final_Ranking` sheets, plus compatibility/research sheets. It also writes one matching CSV per strategy and `Final_Ranking.csv` to `strategy_results\` by default; change this folder with `--strategy-results-dir`. Results are stored in the shared SQLite database in `config/settings.yaml`; each run creates a historical ranking snapshot with strategy memberships and scores.
 
