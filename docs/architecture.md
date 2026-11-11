@@ -100,36 +100,43 @@ The Python stock-screening and scoring engine combines results from the four str
 
 ## Recommended scoring model
 
-Each strategy uses a 100-point component-weight profile:
+## Final ranking model
 
-| Component | Quality correction | Deep value | Recovery 30–50% | Technical reversal |
-|---|---:|---:|---:|---:|
-| Financial quality | 25 | 20 | 25 | 15 |
-| Earnings growth | 20 | 15 | 25 | 15 |
-| Valuation attractiveness | 15 | 25 | 15 | 10 |
-| Technical recovery | 20 | 15 | 15 | 35 |
-| Price correction opportunity | 10 | 10 | 10 | 15 |
-| Risk and governance | 10 | 15 | 10 | 10 |
-| **Total** | **100** | **100** | **100** | **100** |
+The final ranking uses one fixed 100-point model for every stock, regardless of how many screens it passes:
 
-Each component is scored from 0 to 100, then multiplied by its strategy weight. Missing components are excluded and the remaining weights are proportionally renormalized to a 100-point score; `score_coverage_pct` reports average original-weight coverage. Financial quality combines ROCE, ROE, and operating cash flow; earnings growth combines sales and profit growth; valuation uses P/E; risk/governance combines debt/equity with available promoter holding and pledging data.
+| Component | Weight |
+|---|---:|
+| Fundamental quality | 20 |
+| Earnings growth | 20 |
+| Valuation attractiveness | 15 |
+| Technical strength | 20 |
+| Recovery potential | 15 |
+| Risk and governance | 10 |
+| **Total** | **100** |
 
-Technical reversal uses a strategy-specific technical score: momentum is 50% of the component (RSI 40%, MACD 35%, moving averages 25%), volume is 30%, and support is 20%. Price-correction points use drawdown bands from the highest Yahoo adjusted close in the available one-year history, then are multiplied by the mean financial-quality and earnings-growth scores. A large drawdown without either business-recovery signal has no correction score. If a stock appears in multiple screens, its final score is the average of its applicable strategy-profile scores.
+Components are scored from 0 to 100, then multiplied by their fixed weights. Missing components are excluded and the remaining weights are proportionally renormalized; `score_coverage_pct` reports the original-weight coverage. Financial quality combines ROCE, ROE, and operating cash flow; earnings growth combines sales and profit growth; valuation uses P/E; risk/governance combines debt/equity with available promoter holding and pledging data.
+
+Recovery potential uses drawdown bands from the highest Yahoo adjusted close in the available one-year history and is scaled by financial-quality and earnings-growth evidence. A large drawdown alone does not increase this component. Each screen retains an individual strategy score using its strategy-specific profile. The final score does not average those profiles: it always uses the fixed model above. Membership in multiple strategies is displayed as corroboration and does not add points.
+
+## Outputs and history
+
+The generated workbook contains individual result sheets `Quality_Correction`, `Deep_Value`, `Recovery_30_50`, and `Technical_Reversal`, plus `Final_Ranking`. The final sheet consolidates unique stocks passing at least one screen and includes strategy membership, individual screen scores, final score, score coverage, current price, one-year drawdown, and price/fundamental freshness fields.
+
+One shared SQLite database stores market and fundamental data and a timestamped final ranking snapshot per run. Each snapshot contains strategy memberships and scores, so historical per-screen results can be reconstructed from the common table without separate databases. Fair value, entry/exit levels, and stop/invalidation prices remain unavailable until their calculation methodology is agreed. No subjective confidence rating is assigned; use score coverage and data freshness to assess evidence quality.
 
 ## Application architecture
 
 ```text
-NSE / BSE ─┐
-Market APIs ├─→ Python screening and scoring engine ─→ PostgreSQL / Supabase
-Filings ────┘                                              ↓
-                                                   React dashboard
-                                             snapshots, scores, charts,
-                                                       and alerts
+Screener UI CSV exports ─┐
+NSE Indices + Yahoo ─────┴─→ Python screens and final ranking ─→ Shared SQLite history
+                                                                  ↓
+                                                         Local dashboard/workbook
 ```
 
 - **Python engine:** imports screening and financial data, calculates indicators and scores, and creates ranked snapshots.
-- **PostgreSQL / Supabase:** persists historical snapshots and scores for comparison over time.
-- **Local dashboard:** `dashboard.py` serves the searchable four-strategy stock list and a separate final-results funnel from the latest ranked workbook. A hosted React/Vercel dashboard remains a future deployment option.
+- **Shared SQLite database:** persists market data, financial observations, and timestamped final snapshots for comparison over time.
+- **Local dashboard:** `dashboard.py` serves individual screen membership and the consolidated final ranking from the latest workbook. A hosted React/Vercel dashboard remains a future deployment option.
+- **Daily run:** after refreshing the four manual Screener exports, `run_daily_screening.ps1` validates them and runs the same workflow. Task Scheduler can invoke it after market close; it does not fetch or automate Screener.in exports.
 
 ## Data handling considerations
 

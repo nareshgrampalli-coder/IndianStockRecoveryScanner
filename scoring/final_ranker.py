@@ -12,8 +12,7 @@ def rank_candidates(frame: pd.DataFrame) -> pd.DataFrame:
     frame["strategy_2_deep_value"] = strategies.map(lambda values: "strategy_2" in values)
     frame = add_weighted_score(frame)
     frame = frame.sort_values(
-        ["combined_score", "strategy_3_primary", "strategy_1_quality",
-         "strategy_4_entry_timing", "financial_quality_score"],
+        ["combined_score", "score_coverage_pct", "financial_quality_score"],
         ascending=False, na_position="last",
     )
     frame.insert(0, "rank", range(1, len(frame) + 1))

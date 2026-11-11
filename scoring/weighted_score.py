@@ -3,21 +3,28 @@
 import pandas as pd
 
 WEIGHTS = {
-    "financial_quality_score": 25,
+    "financial_quality_score": 20,
     "earnings_growth_component_score": 20,
     "valuation_attractiveness_score": 15,
     "technical_recovery_score": 20,
-    "price_correction_score": 10,
+    "recovery_potential_score": 15,
     "risk_governance_score": 10,
 }
 STRATEGY_WEIGHTS = {
-    "strategy_1": WEIGHTS,
+    "strategy_1": {
+        "financial_quality_score": 25,
+        "earnings_growth_component_score": 20,
+        "valuation_attractiveness_score": 15,
+        "technical_recovery_score": 20,
+        "recovery_potential_score": 10,
+        "risk_governance_score": 10,
+    },
     "strategy_2": {
         "financial_quality_score": 20,
         "earnings_growth_component_score": 15,
         "valuation_attractiveness_score": 25,
         "technical_recovery_score": 15,
-        "price_correction_score": 10,
+        "recovery_potential_score": 10,
         "risk_governance_score": 15,
     },
     "strategy_3": {
@@ -25,7 +32,7 @@ STRATEGY_WEIGHTS = {
         "earnings_growth_component_score": 25,
         "valuation_attractiveness_score": 15,
         "technical_recovery_score": 15,
-        "price_correction_score": 10,
+        "recovery_potential_score": 10,
         "risk_governance_score": 10,
     },
     "strategy_4": {
@@ -33,7 +40,7 @@ STRATEGY_WEIGHTS = {
         "earnings_growth_component_score": 15,
         "valuation_attractiveness_score": 10,
         "technical_recovery_score": 35,
-        "price_correction_score": 15,
+        "recovery_potential_score": 15,
         "risk_governance_score": 10,
     },
 }
@@ -76,9 +83,10 @@ def add_weighted_score(frame: pd.DataFrame) -> pd.DataFrame:
     recovery_available = frame[
         ["financial_quality_score", "earnings_growth_component_score"]
     ].notna().any(axis=1)
-    frame["price_correction_score"] = (
+    frame["recovery_potential_score"] = (
         raw_correction * recovery_evidence / 100
     ).where(recovery_available)
+    frame["price_correction_score"] = frame["recovery_potential_score"]
     if "risk_governance_score" not in frame:
         from scoring.risk_score import score_governance
         frame["risk_governance_score"] = score_governance(frame)
@@ -97,8 +105,6 @@ def add_weighted_score(frame: pd.DataFrame) -> pd.DataFrame:
     frame["technical_reversal_score"] = reversal_technical
 
     memberships = frame["strategy"].fillna("").str.split(", ")
-    strategy_scores = []
-    strategy_coverages = []
     for strategy, weights in STRATEGY_WEIGHTS.items():
         profile = frame[list(weights)].copy()
         if strategy == "strategy_4":
@@ -111,17 +117,17 @@ def add_weighted_score(frame: pd.DataFrame) -> pd.DataFrame:
         coverage_column = f"{strategy}_score_coverage_pct"
         frame[score_column] = score
         frame[coverage_column] = coverage
-        strategy_scores.append(score.rename(score_column))
-        strategy_coverages.append(coverage.rename(coverage_column))
 
-    scores = pd.concat(strategy_scores, axis=1)
-    coverages = pd.concat(strategy_coverages, axis=1)
-    frame["combined_score"] = scores.mean(axis=1, skipna=True)
-    frame["score_coverage_pct"] = coverages.mean(axis=1, skipna=True)
-    no_membership = memberships.map(lambda values: not any(
-        strategy in values for strategy in STRATEGY_WEIGHTS
-    ))
-    default_score, default_coverage = _weighted_average(frame, WEIGHTS)
-    frame.loc[no_membership, "combined_score"] = default_score[no_membership]
-    frame.loc[no_membership, "score_coverage_pct"] = default_coverage[no_membership]
+    frame["combined_score"], final_coverage = _weighted_average(frame, WEIGHTS)
+    frame["score_coverage_pct"] = final_coverage
+    frame["strategy_membership_count"] = memberships.map(
+        lambda values: sum(strategy in values for strategy in STRATEGY_WEIGHTS)
+    )
+    frame["multi_strategy_signal"] = frame["strategy_membership_count"].map(
+        lambda count: (
+            "Multi-screen support" if count > 1
+            else "Single-screen" if count == 1
+            else "No screen match"
+        )
+    )
     return frame

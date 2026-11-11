@@ -16,7 +16,9 @@ from data_processing.data_validator import validate_prices
 from data_processing.financial_cleaner import normalize_company
 from data_processing.price_cleaner import clean_prices
 from data_processing.security_master import apply_security_mappings, load_security_mappings
-from database.models import FundamentalObservation, PriceBar, SecurityMapping
+from database.models import (
+    FundamentalObservation, PriceBar, ScreeningRecord, SecurityMapping,
+)
 from database.repository import ScreeningRepository
 from data_sources.nse_provider import NSEProvider
 from data_sources.screener_importer import read_screener
@@ -27,7 +29,10 @@ from indicators.rsi import rsi
 from scoring.final_ranker import rank_candidates
 from scoring.fundamental_score import score_fundamentals
 from scoring.technical_score import score_technicals
-from strategies.screen_results import write_strategy_results
+from scoring.weighted_score import add_weighted_score
+from strategies.screen_results import (
+    DISPLAY_NAMES, add_strategy_matches, write_strategy_results,
+)
 
 STRATEGIES = ("strategy_1", "strategy_2", "strategy_3", "strategy_4")
 def technicals_for(symbol: str, provider: YahooProvider) -> tuple[dict, list[dict]]:
@@ -67,7 +72,7 @@ def technicals_for(symbol: str, provider: YahooProvider) -> tuple[dict, list[dic
         "price_asof": close.index[-1].strftime("%Y-%m-%d"),
         "market_price": float(close.iloc[-1]),
         "price_high_1y": float(close.max()),
-        "data_provider": "Yahoo Finance",
+        "price_provider": "Yahoo Finance",
         "price_retrieved_at_utc": retrieved_at,
         "price_data_quality_score": bars[-1]["data_quality_score"],
         "rsi14": float(latest_rsi) if pd.notna(latest_rsi) else float("nan"),
@@ -143,6 +148,7 @@ def run(args: argparse.Namespace) -> Path:
     ).groupby("symbol", as_index=False).agg(
         {**aggregate, "strategy": lambda values: ", ".join(sorted(set(values)))}
     )
+    imports = imports.rename(columns={"strategy": "screener_import_membership"})
     candidates = imports.merge(universe, on="symbol", how="inner")
     if candidates.empty:
         raise ValueError("No matching Nifty 500 stocks found. Check the screener exports' symbol format.")
@@ -162,13 +168,38 @@ def run(args: argparse.Namespace) -> Path:
             price_bars[index] = bars
     technical_data = pd.DataFrame.from_dict(results, orient="index").reindex(candidates.index)
     candidates = score_technicals(pd.concat([candidates, technical_data], axis=1))
+    source_candidates = candidates.copy()
+    evaluated_candidates = add_strategy_matches(candidates)
+    screened_at = datetime.now(timezone.utc).isoformat()
+    evaluated_candidates["screened_at_utc"] = screened_at
+    evaluated_candidates["drawdown_from_1y_high_pct"] = (
+        (1 - evaluated_candidates["market_price"] / evaluated_candidates["price_high_1y"]) * 100
+    ).where(evaluated_candidates["price_high_1y"].gt(0))
+    for field in (
+        "fair_value_estimate", "potential_entry_price", "suggested_entry_low",
+        "suggested_entry_high", "exit_target", "upside_scenario",
+        "downside_scenario", "stop_loss_invalidation",
+    ):
+        evaluated_candidates[field] = float("nan")
+    evaluated_candidates["valuation_assumptions"] = "Not calculated: methodology pending"
+    evaluated_candidates["confidence_rating"] = "Not rated; review data coverage"
+    snapshot_candidates = add_weighted_score(evaluated_candidates)
+    candidates = evaluated_candidates[evaluated_candidates["strategy"].ne("")].copy()
     candidates = rank_candidates(candidates)
-    candidates["screened_at_utc"] = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    rank_by_symbol = candidates.set_index("symbol")["rank"]
+    snapshot_candidates["rank"] = snapshot_candidates["symbol"].map(rank_by_symbol)
     write_strategy_results(candidates, args.strategy_results_dir)
+    csv_output_dir = Path(args.strategy_results_dir)
+    candidates.to_csv(csv_output_dir / "Final_Ranking.csv", index=False)
 
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        for strategy, sheet_name in DISPLAY_NAMES.items():
+            candidates[candidates[f"{strategy}_screen_pass"]].to_excel(
+                writer, sheet_name=sheet_name, index=False
+            )
+        candidates.to_excel(writer, sheet_name="Final_Ranking", index=False)
         candidates.to_excel(writer, sheet_name="Ranked Watchlist", index=False)
         candidates[candidates["research_shortlist"]].to_excel(writer, sheet_name="Top 15 Research", index=False)
         imports.to_excel(writer, sheet_name="Combined Screen Imports", index=False)
@@ -177,14 +208,16 @@ def run(args: argparse.Namespace) -> Path:
             ["Fundamental data", "Imported from the provided Screener.in CSV exports; most recent available non-empty value is retained."],
             ["Technical data", "Yahoo Finance daily adjusted price/volume history; values may have a different as-of date."],
             ["Universe", f"Downloaded from NSE Indices: {settings['universe_url']}"],
-            ["Strategy-specific weights", "Each strategy uses its own 100-point component weight profile; see the project architecture documentation."],
-            ["Overall score", "Candidates in multiple strategies are scored with each applicable profile and the scores are averaged; missing components are renormalized within each profile. score_coverage_pct reports average original weight coverage."],
+            ["Final ranking weights", "Fundamental quality 20; earnings growth 20; valuation attractiveness 15; technical strength 20; recovery potential 15; risk and governance 10."],
+            ["Final score", "A single fixed 100-point profile is used for every stock. Multiple strategy memberships are reported as corroboration, not added as bonus points. Missing components are renormalized; score_coverage_pct is the original-weight coverage."],
+            ["Individual strategy scores", "Strategy-specific component profiles are retained in the per-screen sheets. They do not change the final ranking score."],
             ["Financial quality", "Mean of ROCE, ROE and operating-cash-flow scores; missing metrics are excluded."],
             ["Earnings growth", "Mean of sales-growth and profit-growth scores; missing metrics are excluded."],
-            ["Price correction", "Drawdown from the highest Yahoo adjusted close in available one-year history is scored in bands and multiplied by mean financial-quality and earnings-growth evidence; without either evidence source the component is unscored."],
+            ["Recovery potential", "Drawdown from the highest Yahoo adjusted close in available one-year history is scored in bands and scaled by financial-quality and earnings-growth evidence; a drawdown alone does not increase this component."],
             ["Technical reversal", "Strategy 4 technical score weights momentum 50% (RSI 40%, MACD 35%, moving averages 25%), volume 30%, and support 20%."],
             ["Risk and governance", "Mean of available debt/equity, promoter-holding and promoter-pledging scores; unavailable fields are excluded."],
-            ["Strategy priority", "Strategy 3 is the primary screen; Strategy 1 is the quality-filter flag; Strategy 4 is the entry-timing flag. These flags break ties after combined score."],
+            ["Valuation and trade levels", "Fair value, entry range, targets and invalidation levels are blank until a calculation methodology is approved."],
+            ["Data confidence", "No subjective rating is assigned; use score_coverage_pct and the price/fundamental freshness fields to judge evidence completeness."],
             ["ROCE / ROE points", ">=20: 100; >=15: 75; >=12: 50; lower: 0."],
             ["Growth points", ">=15%: 100; >=10%: 75; >=5%: 50; lower: 0."],
             ["Debt points", "<=0.25: 100; <=0.50: 75; <=0.70: 50; higher: 0."],
@@ -218,9 +251,10 @@ def run(args: argparse.Namespace) -> Path:
         )
         for row in universe.itertuples(index=False)
     ]
+    candidate_isins = source_candidates["isin"].to_dict()
     stored_prices = []
     for index, bars in price_bars.items():
-        isin = candidates.loc[index, "isin"]
+        isin = candidate_isins.get(index)
         if pd.isna(isin):
             continue
         stored_prices.extend(
@@ -228,7 +262,7 @@ def run(args: argparse.Namespace) -> Path:
             for bar in bars
         )
     fundamental_records = []
-    for row in candidates.itertuples(index=False):
+    for row in source_candidates.itertuples(index=False):
         payload_fields = (
             "roce", "roe", "sales_growth", "profit_growth", "debt_equity",
             "quarterly_sales_growth", "quarterly_profit_growth",
@@ -252,9 +286,21 @@ def run(args: argparse.Namespace) -> Path:
             data_quality_score=float(row.data_quality_score),
             payload=json.dumps(payload, default=str),
         ))
-    ScreeningRepository(settings["database_path"]).save_market_data(
-        security_records, stored_prices, fundamental_records
-    )
+    repository = ScreeningRepository(settings["database_path"])
+    repository.save_market_data(security_records, stored_prices, fundamental_records)
+    snapshots = json.loads(snapshot_candidates.to_json(orient="records", date_format="iso"))
+    repository.save([
+        ScreeningRecord(
+            symbol=str(snapshot["symbol"]),
+            screened_at_utc=screened_at,
+            combined_score=(
+                float(snapshot["combined_score"])
+                if snapshot.get("combined_score") is not None else None
+            ),
+            payload=json.dumps(snapshot, allow_nan=False),
+        )
+        for snapshot in snapshots
+    ])
     return output
 
 
@@ -273,6 +319,7 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     print(f"Workbook written: {output.resolve()}")
     print(f"Strategy result CSVs written to: {Path(args.strategy_results_dir).resolve()}")
+    print(f"Final ranking CSV: {(Path(args.strategy_results_dir) / 'Final_Ranking.csv').resolve()}")
     return 0
 
 

@@ -13,6 +13,12 @@ MATCHERS = {
     "strategy_3": recovery_30_50_matches,
     "strategy_4": technical_reversal_matches,
 }
+DISPLAY_NAMES = {
+    "strategy_1": "Quality_Correction",
+    "strategy_2": "Deep_Value",
+    "strategy_3": "Recovery_30_50",
+    "strategy_4": "Technical_Reversal",
+}
 
 
 def matching_rows(candidates: pd.DataFrame, strategy: str) -> pd.DataFrame:
@@ -22,9 +28,9 @@ def matching_rows(candidates: pd.DataFrame, strategy: str) -> pd.DataFrame:
     except KeyError as exc:
         raise ValueError(f"Unknown strategy: {strategy}") from exc
 
-    matched = []
-    for row in candidates.to_dict("records"):
-        rule_row = dict(row)
+    matched_indices = []
+    for index, row in candidates.iterrows():
+        rule_row = row.to_dict()
         rule_row["52_week_high"] = row.get("price_high_1y")
         if strategy == "strategy_4":
             rule_row["macd_bullish"] = (
@@ -34,8 +40,31 @@ def matching_rows(candidates: pd.DataFrame, strategy: str) -> pd.DataFrame:
                 str(row.get("above_ema20", "")).strip().lower() == "true"
             )
         if matcher(rule_row):
-            matched.append(row)
-    return pd.DataFrame(matched, columns=candidates.columns)
+            matched_indices.append(index)
+    return candidates.loc[matched_indices].copy()
+
+
+def add_strategy_matches(candidates: pd.DataFrame) -> pd.DataFrame:
+    """Apply all four screen rules and make those results the canonical memberships."""
+    result = candidates.copy()
+    members = {}
+    for strategy in MATCHERS:
+        matched = matching_rows(result, strategy)
+        column = f"{strategy}_screen_pass"
+        result[column] = result.index.isin(matched.index)
+        members[strategy] = result[column]
+    result["strategy"] = result.apply(
+        lambda row: ", ".join(
+            strategy for strategy in MATCHERS if row[f"{strategy}_screen_pass"]
+        ),
+        axis=1,
+    )
+    result["strategy_membership"] = result["strategy"].map(
+        lambda value: ", ".join(
+            DISPLAY_NAMES[strategy] for strategy in value.split(", ") if strategy
+        )
+    )
+    return result
 
 
 def write_strategy_results(

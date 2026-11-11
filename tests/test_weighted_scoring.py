@@ -34,6 +34,14 @@ class WeightedScoringTests(unittest.TestCase):
         }
 
     def test_each_strategy_weight_profile_totals_100(self):
+        self.assertEqual(WEIGHTS, {
+            "financial_quality_score": 20,
+            "earnings_growth_component_score": 20,
+            "valuation_attractiveness_score": 15,
+            "technical_recovery_score": 20,
+            "recovery_potential_score": 15,
+            "risk_governance_score": 10,
+        })
         self.assertEqual(sum(WEIGHTS.values()), 100)
         for weights in STRATEGY_WEIGHTS.values():
             self.assertEqual(sum(weights.values()), 100)
@@ -50,7 +58,7 @@ class WeightedScoringTests(unittest.TestCase):
                    market_price=float("nan"), price_high_1y=float("nan"))
         scored = add_weighted_score(pd.DataFrame([row])).iloc[0]
         self.assertEqual(scored["combined_score"], 100)
-        self.assertEqual(scored["score_coverage_pct"], 70)
+        self.assertEqual(scored["score_coverage_pct"], 65)
 
     def test_correction_is_gated_by_business_recovery_evidence(self):
         row = dict(self.row, roce_score=0, roe_score=0, cash_flow_score=0,
@@ -63,15 +71,19 @@ class WeightedScoringTests(unittest.TestCase):
         scored_missing = add_weighted_score(pd.DataFrame([missing])).iloc[0]
         self.assertTrue(pd.isna(scored_missing["price_correction_score"]))
 
-    def test_overlapping_memberships_average_profile_scores(self):
-        row = dict(self.row, strategy="strategy_2, strategy_4",
-                   valuation_score=100, technical_score=50, rsi_score=0,
-                   macd_score=0, moving_average_score=0, volume_score=100,
-                   support_score=0)
-        scored = add_weighted_score(pd.DataFrame([row])).iloc[0]
-        expected = (scored["strategy_2_score"] + scored["strategy_4_score"]) / 2
-        self.assertEqual(scored["combined_score"], expected)
-        self.assertGreater(scored["strategy_4_score_coverage_pct"], 0)
+    def test_strategy_membership_does_not_bonus_final_score(self):
+        single = dict(self.row, strategy="strategy_1")
+        multiple = dict(
+            self.row,
+            strategy="strategy_1, strategy_2, strategy_3, strategy_4",
+        )
+        scored = add_weighted_score(pd.DataFrame([single, multiple]))
+        self.assertEqual(scored.loc[0, "combined_score"], scored.loc[1, "combined_score"])
+        self.assertEqual(scored["strategy_membership_count"].tolist(), [1, 4])
+        self.assertEqual(
+            scored["multi_strategy_signal"].tolist(),
+            ["Single-screen", "Multi-screen support"],
+        )
 
     def test_deep_value_profile_rewards_valuation_more(self):
         row = dict(

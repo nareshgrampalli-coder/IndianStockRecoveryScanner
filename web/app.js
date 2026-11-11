@@ -10,6 +10,16 @@ function displayNumber(value, digits = 1) {
   return Number.isFinite(Number(value)) ? Number(value).toFixed(digits) : "—";
 }
 
+function displayPercent(value) {
+  const formatted = displayNumber(value);
+  return formatted === "—" ? formatted : `${formatted}%`;
+}
+
+function displayRange(low, high) {
+  if (low === null || low === undefined || high === null || high === undefined) return "—";
+  return `${displayNumber(low, 2)} – ${displayNumber(high, 2)}`;
+}
+
 function safeText(value) {
   return value == null ? "" : String(value);
 }
@@ -56,6 +66,9 @@ function renderScreenTable(stocks) {
       `${safeText(stock.name)} (${safeText(stock.symbol)})`,
       stock.isin ?? "—",
       displayNumber(stock.combined_score),
+      stock.strategy_membership_count ?? "—",
+      displayNumber(stock.market_price, 2),
+      displayPercent(stock.drawdown_from_1y_high_pct),
     ];
     for (const value of values) {
       const cell = document.createElement("td");
@@ -75,7 +88,8 @@ function renderScreenTable(stocks) {
 
 function renderMetricCards(counts) {
   const metrics = [
-    ["Nifty 500 universe", counts.universe],
+    ["Final ranking", counts.final_ranking],
+    ["Multi-screen corroboration", counts.multi_screen],
     ["Strategy 3 · primary", counts.strategy_3_primary],
     ["After Strategy 1 · quality", counts.after_quality_filter],
     ["After Strategy 4 · entry timing", counts.after_entry_timing_filter],
@@ -106,11 +120,22 @@ function renderFinalTable(stocks) {
       stock.rank ?? "—",
       `${safeText(stock.name)} (${safeText(stock.symbol)})`,
       displayNumber(stock.combined_score),
+      stock.strategy_membership_count ?? "—",
+      displayNumber(stock.strategy_1_score),
+      displayNumber(stock.strategy_2_score),
+      displayNumber(stock.strategy_3_score),
+      displayNumber(stock.strategy_4_score),
+      displayNumber(stock.market_price, 2),
+      displayPercent(stock.drawdown_from_1y_high_pct),
       `${displayNumber(stock.score_coverage_pct, 0)}%`,
-      displayNumber(stock.financial_quality_score),
-      displayNumber(stock.earnings_growth_component_score),
-      displayNumber(stock.valuation_attractiveness_score),
-      displayNumber(stock.technical_recovery_score),
+      displayNumber(stock.risk_governance_score),
+      safeText(stock.confidence_rating || "Not rated"),
+      displayNumber(stock.fair_value_estimate, 2),
+      displayRange(stock.suggested_entry_low, stock.suggested_entry_high),
+      displayNumber(stock.exit_target, 2),
+      displayNumber(stock.stop_loss_invalidation, 2),
+      safeText(stock.price_asof || "—"),
+      safeText(stock.publication_date || "—"),
     ];
     for (const value of values) {
       const cell = document.createElement("td");
@@ -120,7 +145,7 @@ function renderFinalTable(stocks) {
     body.append(row);
   }
   if (stocks.length === 0) {
-    statusMessage("No stocks currently pass Strategy 3 + Strategy 1 + Strategy 4. Review the funnel counts or refresh the screening inputs.");
+    statusMessage("No stocks currently pass any of the four implemented strategy screens. Review the input exports and data availability.");
   } else if (filtered.length === 0) {
     statusMessage("No final candidates match this search.");
   } else {

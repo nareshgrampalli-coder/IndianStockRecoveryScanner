@@ -6,7 +6,7 @@ from dashboard import build_dashboard_payload
 
 
 class DashboardTests(unittest.TestCase):
-    def test_dashboard_applies_primary_quality_and_entry_funnel(self):
+    def test_dashboard_reports_final_ranking_and_retains_research_funnel(self):
         frame = pd.DataFrame([
             {
                 "rank": 1, "symbol": "AAA", "name": "Alpha",
@@ -38,8 +38,10 @@ class DashboardTests(unittest.TestCase):
         self.assertEqual(payload["counts"]["strategy_3_primary"], 3)
         self.assertEqual(payload["counts"]["after_quality_filter"], 2)
         self.assertEqual(payload["counts"]["after_entry_timing_filter"], 1)
+        self.assertEqual(payload["counts"]["final_ranking"], 4)
         self.assertEqual(
-            [row["symbol"] for row in payload["final_candidates"]], ["AAA"]
+            [row["symbol"] for row in payload["final_candidates"]],
+            ["AAA", "BBB", "CCC", "DDD"],
         )
 
 

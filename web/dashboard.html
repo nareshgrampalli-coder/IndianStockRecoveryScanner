@@ -18,21 +18,21 @@
   <main>
     <section class="page-heading">
       <div>
-        <p class="eyebrow">FINAL RESULTS · WEIGHTED RESEARCH SCORES</p>
-        <h1>Primary screen → quality → entry timing</h1>
-        <p>Strategy 3 defines the candidate set; Strategy 1 applies the quality filter; Strategy 4 narrows it to entry-timing screen members.</p>
+        <p class="eyebrow">FINAL RESULTS · CONSOLIDATED RANKING</p>
+        <h1>Consolidated investment ranking</h1>
+        <p>Unique stocks passing at least one of the four strategy screens, ranked with a common 100-point model.</p>
       </div>
       <a class="button-link secondary" href="/">View all screens <span aria-hidden="true">→</span></a>
     </section>
     <section id="metrics" class="metric-grid" aria-label="Screening funnel"></section>
     <section class="notice">
-      <strong>Final research set</strong>
-      <span>Stocks shown here belong to Strategies 3, 1, and 4. Strategy 4 membership comes from the imported screen; verify RSI, MACD, moving averages, volume, and current data before considering an entry. Scores support research and are not recommendations.</span>
+      <strong>How to interpret this ranking</strong>
+      <span>Strategy overlap is shown as corroboration, not added as bonus points. Fair value and trade levels are unavailable until their methodology is defined. Review data coverage and freshness; scores are research aids, not recommendations.</span>
     </section>
     <section class="section-heading">
       <div>
         <h2>Final candidates</h2>
-        <p>Sorted by the strategy-specific combined score. A blank list means no stock currently passes all three screen-membership filters.</p>
+        <p>Sorted by the common final score. The four screen-specific tabs in the workbook show each strategy's individual results and score.</p>
       </div>
       <label class="search-wrap">Search final candidates
         <input id="search" type="search" placeholder="Symbol, company, or ISIN">
@@ -43,9 +43,11 @@
       <table class="wide-table">
         <thead>
           <tr>
-            <th>Rank</th><th>Company</th><th>Score</th><th>Coverage</th>
-            <th>Financial quality</th><th>Earnings growth</th>
-            <th>Valuation</th><th>Technical recovery</th>
+            <th>Rank</th><th>Company</th><th>Final score</th><th>Screens</th>
+            <th>S1</th><th>S2</th><th>S3</th><th>S4</th>
+            <th>Price</th><th>52-week drawdown</th><th>Coverage</th><th>Risk / governance</th><th>Confidence</th>
+            <th>Fair value</th><th>Entry range</th><th>Exit target</th>
+            <th>Stop / invalidation</th><th>Price as of</th><th>Financial publication</th>
           </tr>
         </thead>
         <tbody id="final-rows"></tbody>

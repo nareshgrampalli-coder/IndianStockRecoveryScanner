@@ -2,12 +2,12 @@
 
 ## Recommended sequence
 
-1. Run all four screens and export each result to CSV.
-2. Combine the results and remove duplicates to create a master Nifty 500 watchlist.
-3. Score fundamentals: ROCE, ROE, sales growth, earnings growth, debt, cash flow, and valuation.
-4. Score technical recovery: RSI, MACD, 20/50/200-day moving averages, volume, and support.
-5. Rank candidates and select the best 10–15 for detailed research.
+1. Run each documented query in Screener.in and export its consolidated results to CSV.
+2. The local strategy runner validates each CSV against its strategy rule; Yahoo Finance supplies current price and technicals.
+3. Consolidate matching stocks by ISIN and retain their membership across the four screens.
+4. Score each screen and calculate the final ranking using the shared 20/20/15/20/15/10 component weights.
+5. Review the top-ranked unique candidates, component coverage, risk/governance data, and source freshness.
 
-Export the resulting ranked watchlist to Excel with `python app.py`, then open the stock list and final-results dashboard with `python dashboard.py`. See the repository [README](../README.md) for the full commands and required input format.
+The workbook contains four individual screen result sheets and a `Final_Ranking` sheet. Every run stores a timestamped snapshot in the shared SQLite database. After refreshing the four Screener exports, `run_daily_screening.ps1` runs the workflow and validates the input file dates. Configure Windows Task Scheduler to call it after market close if unattended execution is desired; Screener exports themselves remain a manual step.
 
-Use Strategy 3 as the primary screen, Strategy 1 as the quality filter, and Strategy 4 as the entry-timing filter. This combination helps avoid selecting companies only because they are cheap or oversold.
+Multiple strategy memberships are reported as corroboration but do not add points to the common final score. Fair-value and trade-level outputs remain unavailable until their methodology is specified. See the repository [README](../README.md) for commands, fields, and input requirements.

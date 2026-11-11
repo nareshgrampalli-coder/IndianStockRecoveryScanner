@@ -63,12 +63,16 @@ def build_dashboard_payload(frame: pd.DataFrame) -> dict:
         "strategy_3_primary": len(primary),
         "after_quality_filter": len(quality),
         "after_entry_timing_filter": len(entry_timing),
+        "final_ranking": len(records),
+        "multi_screen": sum(
+            (row.get("strategy_membership_count") or 0) > 1 for row in records
+        ),
     }
     return {
         "counts": counts,
         "primary_candidates": primary,
         "quality_candidates": quality,
-        "final_candidates": entry_timing,
+        "final_candidates": records,
     }
 
 
@@ -96,7 +100,10 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 raise FileNotFoundError(
                     f"{self.workbook_path} was not found. Run app.py first to generate the ranked workbook."
                 )
-            frame = pd.read_excel(self.workbook_path, sheet_name="Ranked Watchlist")
+            try:
+                frame = pd.read_excel(self.workbook_path, sheet_name="Final_Ranking")
+            except ValueError:
+                frame = pd.read_excel(self.workbook_path, sheet_name="Ranked Watchlist")
             records = stock_records(frame)
             payload = (
                 {"stocks": records}
