@@ -30,6 +30,7 @@ ALIASES = {
     ),
     "financial_period": ("financial period", "period ended", "financial year", "quarter ended"),
     "publication_date": ("publication date", "filing date", "published on", "announcement date"),
+    "data_provider": ("data provider", "source", "provider"),
 }
 
 
@@ -99,7 +100,14 @@ def read_screener(path: str | Path, strategy: str) -> pd.DataFrame:
     for field in ("financial_period", "publication_date"):
         column = find_column(frame, field)
         rows[field] = frame[column].astype("string").str.strip() if column else pd.NA
-    rows["data_provider"] = "Screener.in"
+    provider_col = find_column(frame, "data_provider")
+    rows["data_provider"] = (
+        frame[provider_col].astype("string").str.strip()
+        if provider_col else "Screener.in"
+    )
+    rows["data_provider"] = rows["data_provider"].replace(
+        {"": "Screener.in", "nan": "Screener.in", "None": "Screener.in"}
+    )
     rows["retrieved_at_utc"] = datetime.now(timezone.utc).isoformat()
     for field in ("roce", "roe", "sales_growth", "profit_growth",
                   "quarterly_sales_growth", "quarterly_profit_growth", "debt_equity",

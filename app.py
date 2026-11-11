@@ -9,6 +9,7 @@ from pathlib import Path
 import sys
 
 import pandas as pd
+from tqdm import tqdm
 
 from config.runtime import load_settings
 from data_processing.corporate_actions import apply_adjustments
@@ -167,7 +168,12 @@ def run(args: argparse.Namespace) -> Path:
             executor.submit(technicals_for, symbol, provider): index
             for index, symbol in candidates["symbol"].items()
         }
-        for future in as_completed(futures):
+        for future in tqdm(
+            as_completed(futures),
+            total=len(futures),
+            desc="Fetching Yahoo Finance data",
+            unit="stock",
+        ):
             index = futures[future]
             metrics, bars = future.result()
             results[index] = metrics
