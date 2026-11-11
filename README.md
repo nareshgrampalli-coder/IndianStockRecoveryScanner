@@ -6,6 +6,7 @@ This tool applies four documented strategy rules to manually exported Screener.i
 
 - Fundamentals and valuation metrics come from the supplied Screener.in exports. Export a CSV from each of the four saved screens. Include a `Statement Type` or `Financial Basis` column identifying every row as `Consolidated`, plus Symbol and the available metric columns. Exports without explicit consolidated metadata or containing standalone rows are rejected. Include financial period and publication date columns when available; these dates are retained separately and are required for use in historical fundamental backtests. Missing metrics remain unavailable (not zero-scored) and are listed with a completeness-based data-quality score.
 - Nifty 500 constituents are downloaded at run time from Nifty Indices.
+- The NSE universe loader cleans whitespace, incomplete rows, invalid-ISIN rows, and exact duplicates on every download. Exclusions are reported as warnings; ambiguous symbol/ISIN mappings fail explicitly rather than being guessed.
 - RSI, MACD, moving averages, volume and 20-day support proxy are calculated from corporate-action-adjusted Yahoo Finance prices and volume, using NSE `.NS` symbols. Raw and adjusted OHLC are both persisted.
 - The constituent list and market data require an internet connection. Yahoo Finance coverage or rate limits can leave individual technical metrics unavailable.
 - Screener fundamental values and Yahoo technicals may have different as-of dates; see each workbook row's `price_asof` and the scoring/sources sheet.
@@ -82,10 +83,10 @@ python ingest_data.py `
   --strategy-3 data\inputs\strategy3.csv `
   --strategy-4 data\inputs\strategy4.csv `
   --output-dir normalized_data `
-  --bhavcopy-csv path\to\nse_bhavcopy.csv
+  --bhavcopy-csv data\inputs\nse_bhavcopy.csv
 ```
 
-The Bhavcopy argument is optional; when provided, the CSV must contain ISIN, trade date, and close price columns. The job writes:
+The Bhavcopy argument is optional; include it only after saving an actual NSE Bhavcopy CSV as `data\inputs\nse_bhavcopy.csv`. The file must contain ISIN, trade date, and close price columns. The job writes:
 
 - `normalized_data/normalized_stocks.csv`: one row per Nifty 500 constituent with canonical ISIN, all four strategy memberships, financial fields, provenance, quality, and price-validation status.
 - `normalized_data/normalized_daily_prices.csv`: raw and adjusted daily OHLCV history.
