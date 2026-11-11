@@ -16,7 +16,7 @@ Use Python 3.10 or newer:
 
 ```powershell
 python -m pip install -r requirements.txt
-python screening_workflow.py `
+python app.py `
   --strategy-1 path\to\strategy1.csv `
   --strategy-2 path\to\strategy2.csv `
   --strategy-3 path\to\strategy3.csv `
@@ -24,7 +24,16 @@ python screening_workflow.py `
   --output screening_results.xlsx
 ```
 
+The same command-line interface remains available through `screening_workflow.py`. Settings such as the universe URL, history period, and worker count are in `config/settings.yaml`.
+
 The workbook contains `Ranked Watchlist`, `Top 15 Research`, `Combined Screen Imports`, `Nifty 500 Universe`, and `Scoring & Sources` sheets. Strategy membership and flags are retained for each stock: Strategy 3 is the primary screen, Strategy 1 the quality filter, Strategy 4 the entry-timing filter, and Strategy 2 the deep-value list. Combined score determines ranking, with these strategy flags used as tie-breakers. The first 15 ranked stocks are a research shortlist, not a buy recommendation.
+
+## Project modules
+
+- `data_sources/` contains NSE Indices and Yahoo Finance providers, the Screener CSV importer, and explicit Dhan, Upstox, and BSE integration boundaries. Dhan/Upstox credentials and BSE disclosure retrieval are not configured.
+- `data_processing/`, `indicators/`, `strategies/`, and `scoring/` hold reusable cleaning, indicator, screen-condition, scoring, and ranking functions.
+- `backtesting/` provides next-bar, long-only return calculations. `database/` provides a SQLite screening-result repository.
+- `config/` contains runtime settings and a stock-universe CSV template.
 
 ## Scoring outline
 

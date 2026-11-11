@@ -1,0 +1,5 @@
+universe_url: https://www.niftyindices.com/IndexConstituent/ind_nifty500list.csv
+request_timeout_seconds: 30
+technical_workers: 5
+history_period: 1y
+database_path: data/screening.sqlite3

@@ -1,0 +1,1 @@
+"""Four strategy condition evaluators."""
