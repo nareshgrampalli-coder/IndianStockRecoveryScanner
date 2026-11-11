@@ -12,6 +12,18 @@
 
 Use company filings and exchange-published information as authoritative sources where available. Treat third-party APIs as delivery mechanisms, record data timestamps and provenance, and account for provider terms, coverage, and rate limits.
 
+## 2. Data source comparison
+
+| Source | Price history | Fundamentals | Technical data | Recommendation |
+|---|---|---|---|---|
+| NSE India | Excellent EOD | Corporate filings | Some reports | Primary official source |
+| BSE India | Excellent EOD | Corporate filings | Some reports | Secondary validation |
+| DhanHQ | Excellent | Limited | Calculate yourself | Strong API option |
+| Upstox | Excellent | Limited | Calculate yourself | Strong API option |
+| FYERS | Excellent | Limited | Calculate yourself | Strong API option |
+| Screener.in | Limited | Excellent | Limited | Fundamental research |
+| Yahoo Finance | Good | Inconsistent | Calculate yourself | Development/testing |
+
 ## Screening workflow
 
 ```text
