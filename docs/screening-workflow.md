@@ -8,6 +8,6 @@
 4. Score technical recovery: RSI, MACD, 20/50/200-day moving averages, volume, and support.
 5. Rank candidates and select the best 10–15 for detailed research.
 
-Export the resulting ranked watchlist to Excel with `python app.py`; see the repository [README](../README.md) for the full command and required input format.
+Export the resulting ranked watchlist to Excel with `python app.py`, then open the stock list and final-results dashboard with `python dashboard.py`. See the repository [README](../README.md) for the full commands and required input format.
 
 Use Strategy 3 as the primary screen, Strategy 1 as the quality filter, and Strategy 4 as the entry-timing filter. This combination helps avoid selecting companies only because they are cheap or oversold.

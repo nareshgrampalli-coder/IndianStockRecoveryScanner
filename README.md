@@ -52,11 +52,22 @@ It also persists security mappings, price bars, and consolidated financial obser
 
 The workbook contains `Ranked Watchlist`, `Top 15 Research`, `Combined Screen Imports`, `Nifty 500 Universe`, and `Scoring & Sources` sheets. Strategy membership and flags are retained for each stock: Strategy 3 is the primary screen, Strategy 1 the quality filter, Strategy 4 the entry-timing filter, and Strategy 2 the deep-value list. Combined score determines ranking, with these strategy flags used as tie-breakers. The first 15 ranked stocks are a research shortlist, not a buy recommendation.
 
+## Local web pages
+
+After generating the workbook, start the local dashboard:
+
+```powershell
+python dashboard.py --workbook screening_results.xlsx
+```
+
+Open `http://127.0.0.1:8000/` for the searchable all-strategy stock list, or `http://127.0.0.1:8000/dashboard` for the separate final-results dashboard. The final funnel is Strategy 3 primary candidates → Strategy 1 quality members → Strategy 4 entry-timing members. Strategy 4 membership comes from its imported screen; verify the technical indicators and current data before considering a trade. Stop the local server with `Ctrl+C`.
+
 ## Project modules
 
 - `data_sources/` contains NSE Indices and Yahoo Finance providers, the Screener CSV importer, and explicit Dhan, Upstox, and BSE integration boundaries. Dhan/Upstox credentials and BSE disclosure retrieval are not configured.
 - `data_processing/`, `indicators/`, `strategies/`, and `scoring/` hold reusable cleaning, indicator, screen-condition, scoring, and ranking functions.
 - `backtesting/` provides next-bar, long-only return calculations. `database/` provides a SQLite screening-result repository.
+- `dashboard.py` serves a local stock-list page and a separate final-results dashboard from the latest ranked workbook.
 - `config/` contains runtime settings and a stock-universe CSV template.
 - ISIN is the canonical identifier. `config/stock_universe.csv` maintains ISIN, company name, NSE symbol and BSE symbol mappings; NSE constituent downloads must include ISIN.
 - Screening runs persist security mappings, raw/adjusted price bars, and consolidated financial observations with provider, retrieval time and data-quality metadata in the configured SQLite database.

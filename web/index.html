@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Four Strategy Stock Screens</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body data-view="screens">
+  <header class="topbar">
+    <a class="brand" href="/">Indian Stock Recovery Scanner</a>
+    <nav aria-label="Main navigation">
+      <a class="active" href="/">Four strategy screens</a>
+      <a href="/dashboard">Final dashboard</a>
+    </nav>
+  </header>
+  <main>
+    <section class="page-heading">
+      <div>
+        <p class="eyebrow">NIFTY 500 · RESEARCH WORKSPACE</p>
+        <h1>Four strategy screens</h1>
+        <p>Explore the stocks selected by each screen and compare their combined research scores.</p>
+      </div>
+      <a class="button-link" href="/dashboard">Open final dashboard <span aria-hidden="true">→</span></a>
+    </section>
+    <section class="notice">
+      <strong>How to read this list</strong>
+      <span>Strategy 3 is the primary screen. Strategy 1 adds a quality filter; Strategy 4 is the entry-timing screen. Membership is not a buy signal—review financials and technical conditions.</span>
+    </section>
+    <section class="toolbar" aria-label="Stock list controls">
+      <label class="search-wrap">Search
+        <input id="search" type="search" placeholder="Symbol, company, or ISIN">
+      </label>
+      <label>Show
+        <select id="strategy-filter">
+          <option value="all">All stocks</option>
+          <option value="strategy_3_primary">Strategy 3 · Primary</option>
+          <option value="strategy_1_quality">Strategy 1 · Quality</option>
+          <option value="strategy_4_entry_timing">Strategy 4 · Entry timing</option>
+          <option value="strategy_2_deep_value">Strategy 2 · Deep value</option>
+        </select>
+      </label>
+      <span id="result-count" class="muted"></span>
+    </section>
+    <div id="status" class="status" role="status">Loading ranked stock data…</div>
+    <section class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Rank</th><th>Company</th><th>ISIN</th><th>Score</th>
+            <th>Strategy 3<br><small>Primary</small></th>
+            <th>Strategy 1<br><small>Quality</small></th>
+            <th>Strategy 4<br><small>Entry timing</small></th>
+            <th>Strategy 2<br><small>Deep value</small></th>
+          </tr>
+        </thead>
+        <tbody id="stock-rows"></tbody>
+      </table>
+    </section>
+  </main>
+  <footer>Research support only · Verify current filings, prices, and risk before making investment decisions.</footer>
+</body>
+</html>

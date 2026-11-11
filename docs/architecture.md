@@ -129,7 +129,7 @@ Filings ────┘                                              ↓
 
 - **Python engine:** imports screening and financial data, calculates indicators and scores, and creates ranked snapshots.
 - **PostgreSQL / Supabase:** persists historical snapshots and scores for comparison over time.
-- **React dashboard:** displays scores and charts and provides alerts based on configured conditions.
+- **Local dashboard:** `dashboard.py` serves the searchable four-strategy stock list and a separate final-results funnel from the latest ranked workbook. A hosted React/Vercel dashboard remains a future deployment option.
 
 ## Data handling considerations
 

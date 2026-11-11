@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Final Results Dashboard</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body data-view="dashboard">
+  <header class="topbar">
+    <a class="brand" href="/">Indian Stock Recovery Scanner</a>
+    <nav aria-label="Main navigation">
+      <a href="/">Four strategy screens</a>
+      <a class="active" href="/dashboard">Final dashboard</a>
+    </nav>
+  </header>
+  <main>
+    <section class="page-heading">
+      <div>
+        <p class="eyebrow">FINAL RESULTS · WEIGHTED RESEARCH SCORES</p>
+        <h1>Primary screen → quality → entry timing</h1>
+        <p>Strategy 3 defines the candidate set; Strategy 1 applies the quality filter; Strategy 4 narrows it to entry-timing screen members.</p>
+      </div>
+      <a class="button-link secondary" href="/">View all screens <span aria-hidden="true">→</span></a>
+    </section>
+    <section id="metrics" class="metric-grid" aria-label="Screening funnel"></section>
+    <section class="notice">
+      <strong>Final research set</strong>
+      <span>Stocks shown here belong to Strategies 3, 1, and 4. Strategy 4 membership comes from the imported screen; verify RSI, MACD, moving averages, volume, and current data before considering an entry. Scores support research and are not recommendations.</span>
+    </section>
+    <section class="section-heading">
+      <div>
+        <h2>Final candidates</h2>
+        <p>Sorted by the strategy-specific combined score. A blank list means no stock currently passes all three screen-membership filters.</p>
+      </div>
+      <label class="search-wrap">Search final candidates
+        <input id="search" type="search" placeholder="Symbol, company, or ISIN">
+      </label>
+    </section>
+    <div id="status" class="status" role="status">Loading final results…</div>
+    <section class="table-wrap">
+      <table class="wide-table">
+        <thead>
+          <tr>
+            <th>Rank</th><th>Company</th><th>Score</th><th>Coverage</th>
+            <th>Financial quality</th><th>Earnings growth</th>
+            <th>Valuation</th><th>Technical recovery</th>
+          </tr>
+        </thead>
+        <tbody id="final-rows"></tbody>
+      </table>
+    </section>
+  </main>
+  <footer>Research support only · Verify current filings, prices, and risk before making investment decisions.</footer>
+</body>
+</html>
