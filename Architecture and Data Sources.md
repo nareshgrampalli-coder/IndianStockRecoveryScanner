@@ -45,6 +45,23 @@ Use company filings and exchange-published information as authoritative sources 
 | Delivery percentage | NSE reports |
 | Bulk and block deals | NSE reports |
 
+## 4. Python libraries to use
+
+You do not need an external technical-indicator API. Calculate indicators yourself from historical OHLCV data.
+
+| Library | Purpose |
+|---|---|
+| `pandas` | Financial data processing |
+| `numpy` | Calculations and scoring |
+| `yfinance` | Secondary price validation |
+| `ta` | RSI, MACD, ADX, Bollinger Bands |
+| `TA-Lib` | Technical indicators |
+| `requests` | API integration |
+| `sqlalchemy` | Database integration |
+| `pydantic` | Data validation |
+| `backtesting.py` | Strategy backtesting |
+| `plotly` | Interactive charts |
+
 ## Screening workflow
 
 ```text
