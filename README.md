@@ -37,6 +37,6 @@ The workbook contains `Ranked Watchlist`, `Top 15 Research`, `Combined Screen Im
 
 ## Scoring outline
 
-Each available factor is scored from 0 to 100. Fundamental and technical group scores are the mean of their available factors; the combined score equally weights the two groups. ROCE/ROE, growth, debt, cash flow and P/E thresholds, plus technical scoring rules, are documented in the workbook. The technical indicators are confirmation/monitoring signals; they do not replace company research.
+The final score uses a 100-point weighted model: financial quality 25, earnings growth 20, valuation attractiveness 15, technical recovery 20, price correction opportunity 10, and risk/governance 10. Each component is scored 0-100 and contributes according to its weight. When a component is unavailable, the available weights are proportionally renormalized; `score_coverage_pct` shows the total original weight represented by available data. The workbook documents component definitions and thresholds. Technical indicators are confirmation/monitoring signals; they do not replace company research.
 
 The tool does not automatically trade, make investment recommendations, or guarantee that a candidate is suitable. Check official filings and data freshness before relying on any result.

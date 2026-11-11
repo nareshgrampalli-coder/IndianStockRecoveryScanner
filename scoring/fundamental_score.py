@@ -26,6 +26,9 @@ def score_fundamentals(frame: pd.DataFrame) -> pd.DataFrame:
         lambda x: 100 if 0 < x <= 20 else 75 if 0 < x <= 25 else 50 if 0 < x <= 35 else 0
         if pd.notna(x) else float("nan")
     )
+    for field in ("promoter_holding", "promoter_pledging"):
+        if field not in frame:
+            frame[field] = float("nan")
     frame["fundamental_score"] = frame[FACTORS].mean(axis=1, skipna=True)
     frame["fundamentals_available"] = frame[FACTORS].notna().sum(axis=1)
     return frame

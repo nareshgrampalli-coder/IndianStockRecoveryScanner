@@ -17,6 +17,8 @@ ALIASES = {
     "operating_cash_flow": ("operating cash flow 3years", "operating cash flow", "cash from operating activity"),
     "pe": ("stock p/e", "price to earning", "price to earnings", "p/e", "pe"),
     "market_cap": ("market cap rs.cr.", "market capitalization", "market cap"),
+    "promoter_holding": ("promoter holding", "promoters holding"),
+    "promoter_pledging": ("pledged percentage", "promoter pledged", "promoter pledging"),
 }
 
 
@@ -47,7 +49,8 @@ def read_screener(path: str | Path, strategy: str) -> pd.DataFrame:
     rows["name"] = rows["name"].astype(str).str.strip()
     rows["strategy"] = strategy
     for field in ("roce", "roe", "sales_growth", "profit_growth", "debt_equity",
-                  "operating_cash_flow", "pe", "market_cap"):
+                  "operating_cash_flow", "pe", "market_cap", "promoter_holding",
+                  "promoter_pledging"):
         column = find_column(frame, field)
         rows[field] = frame[column].map(number) if column else float("nan")
     return rows[rows["symbol"].eq("") | rows["symbol"].str.match(r"^[A-Z0-9&.-]+$", na=False)]

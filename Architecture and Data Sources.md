@@ -76,6 +76,22 @@ Ranked watchlist
 
 The Python stock-screening and scoring engine combines results from the four strategies, evaluates fundamental and technical criteria, and produces a ranked watchlist for further research.
 
+## Recommended scoring model
+
+The final rank uses a 100-point weighted model across the four strategies:
+
+| Component | Weight |
+|---|---:|
+| Financial quality | 25 |
+| Earnings growth | 20 |
+| Valuation attractiveness | 15 |
+| Technical recovery | 20 |
+| Price correction opportunity | 10 |
+| Risk and governance | 10 |
+| **Total** | **100** |
+
+Each component is scored from 0 to 100, then multiplied by its weight. Missing components are excluded and the remaining weights are proportionally renormalized to a 100-point score; `score_coverage_pct` reports the sum of available original weights. Financial quality combines ROCE, ROE, and operating cash flow; earnings growth combines sales and profit growth; valuation uses P/E; technical recovery uses RSI, MACD, moving averages, volume, and support; correction uses drawdown from the highest Yahoo adjusted close in the available one-year history; risk/governance combines debt/equity with available promoter holding and pledging data.
+
 ## Application architecture
 
 ```text

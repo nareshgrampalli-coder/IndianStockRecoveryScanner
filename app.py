@@ -61,6 +61,7 @@ def technicals_for(symbol: str, provider: YahooProvider) -> dict:
     return {
         "price_asof": close.index[-1].strftime("%Y-%m-%d"),
         "market_price": float(close.iloc[-1]),
+        "price_high_1y": float(close.max()),
         "rsi14": float(latest_rsi) if pd.notna(latest_rsi) else float("nan"),
         "macd": float(macd_line.iloc[-1]),
         "macd_signal": float(signal_line.iloc[-1]),
@@ -109,7 +110,7 @@ def run(args: argparse.Namespace) -> Path:
     aggregate = {
         field: "first" for field in (
             "name", "roce", "roe", "sales_growth", "profit_growth", "debt_equity",
-            "operating_cash_flow", "pe", "market_cap",
+            "operating_cash_flow", "pe", "market_cap", "promoter_holding", "promoter_pledging",
         )
     }
     imports = imports.sort_values("strategy").groupby("symbol", as_index=False).agg(
@@ -145,8 +146,12 @@ def run(args: argparse.Namespace) -> Path:
             ["Fundamental data", "Imported from the provided Screener.in CSV exports; most recent available non-empty value is retained."],
             ["Technical data", "Yahoo Finance daily adjusted price/volume history; values may have a different as-of date."],
             ["Universe", f"Downloaded from NSE Indices: {settings['universe_url']}"],
-            ["Scoring", "Each available metric is scored 0-100; group scores average available components only."],
-            ["Overall score", "Equal-weight average of fundamental and technical group scores; missing groups are excluded."],
+            ["Scoring weights", "Financial quality 25; earnings growth 20; valuation attractiveness 15; technical recovery 20; price correction opportunity 10; risk and governance 10."],
+            ["Overall score", "Weighted score is normalized across components with available data; score_coverage_pct reports the original weight coverage."],
+            ["Financial quality", "Mean of ROCE, ROE and operating-cash-flow scores; missing metrics are excluded."],
+            ["Earnings growth", "Mean of sales-growth and profit-growth scores; missing metrics are excluded."],
+            ["Price correction", "Based on drawdown from the highest Yahoo adjusted close in available one-year history: >=50%: 100; >=35%: 75; >=25%: 50; >=15%: 25; otherwise 0."],
+            ["Risk and governance", "Mean of available debt/equity, promoter-holding and promoter-pledging scores; unavailable fields are excluded."],
             ["Strategy priority", "Strategy 3 is the primary screen; Strategy 1 is the quality-filter flag; Strategy 4 is the entry-timing flag. These flags break ties after combined score."],
             ["ROCE / ROE points", ">=20: 100; >=15: 75; >=12: 50; lower: 0."],
             ["Growth points", ">=15%: 100; >=10%: 75; >=5%: 50; lower: 0."],
