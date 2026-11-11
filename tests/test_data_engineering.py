@@ -77,6 +77,23 @@ class DataEngineeringTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "only consolidated"):
                 read_screener(path, "strategy_1")
 
+    def test_screener_import_reports_empty_csv_path(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "empty_strategy.csv"
+            path.write_bytes(b"")
+            with self.assertRaisesRegex(
+                ValueError,
+                r"empty_strategy\.csv: Screener CSV is empty",
+            ):
+                read_screener(path, "strategy_1")
+
+            path.write_text("Symbol,Statement Type\n", encoding="utf-8")
+            with self.assertRaisesRegex(
+                ValueError,
+                r"empty_strategy\.csv: Screener CSV contains headers but no data rows",
+            ):
+                read_screener(path, "strategy_1")
+
     def test_point_in_time_backtest_excludes_future_and_unknown_observations(self):
         fundamentals = pd.DataFrame([
             {

@@ -53,7 +53,14 @@ def find_column(frame: pd.DataFrame, field: str) -> str | None:
 
 def read_screener(path: str | Path, strategy: str) -> pd.DataFrame:
     path = Path(path)
-    frame = pd.read_csv(path, encoding="utf-8-sig")
+    try:
+        frame = pd.read_csv(path, encoding="utf-8-sig")
+    except pd.errors.EmptyDataError as exc:
+        raise ValueError(
+            f"{path}: Screener CSV is empty; export the strategy results with headers and data rows"
+        ) from exc
+    if frame.empty:
+        raise ValueError(f"{path}: Screener CSV contains headers but no data rows")
     symbol_col, name_col = find_column(frame, "symbol"), find_column(frame, "name")
     basis_col = find_column(frame, "financial_basis")
     if symbol_col is None and name_col is None:
