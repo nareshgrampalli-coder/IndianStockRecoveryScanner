@@ -7,7 +7,7 @@ Find heavily beaten-down companies with positive fundamentals.
 ### Screener.in query
 
 ```text
-Market Capitalization > 1000
+Market Capitalization > 10000
 AND Current price < High price * 0.50
 AND Return on capital employed > 12
 AND Return on equity > 10

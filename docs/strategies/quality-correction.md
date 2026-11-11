@@ -7,7 +7,7 @@ Find profitable companies with strong returns on capital, manageable debt and me
 ### Screener.in query
 
 ```text
-Market Capitalization > 1000
+Market Capitalization > 10000
 AND Return on capital employed > 15
 AND Return on equity > 15
 AND Debt to equity < 0.5

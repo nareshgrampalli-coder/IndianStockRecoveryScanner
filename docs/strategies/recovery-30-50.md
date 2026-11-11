@@ -5,7 +5,7 @@ This is the primary screen for a 6–12 month investment horizon.
 ## Screener.in query
 
 ```text
-Market Capitalization > 2000
+Market Capitalization > 10000
 AND Current price < High price * 0.75
 AND Return on capital employed > 15
 AND Return on equity > 12

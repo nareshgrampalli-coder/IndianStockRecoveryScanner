@@ -7,7 +7,7 @@ Screener.in has limited technical screening capabilities. Use this query for pre
 ### Screener.in query
 
 ```text
-Market Capitalization > 1000
+Market Capitalization > 10000
 AND Current price < High price * 0.80
 AND Return on capital employed > 12
 AND Debt to equity < 0.7

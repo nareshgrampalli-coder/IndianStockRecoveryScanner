@@ -69,7 +69,7 @@ class ScreeningRunTests(unittest.TestCase):
                 "Statement Type": "Consolidated",
                 "Financial Period": "2025-03-31",
                 "Publication Date": "2025-05-01",
-                "Market Cap": 5000,
+                "Market Cap": 15000,
                 "ROCE": 25,
                 "ROE": 20,
                 "Debt to Equity": 0.2,

@@ -1,6 +1,6 @@
 def matches(row) -> bool:
     return (
-        row.get("market_cap", float("nan")) > 1000
+        row.get("market_cap", float("nan")) > 10000
         and row.get("52_week_high", float("nan")) > 0
         and row.get("market_price", float("nan"))
         < row.get("52_week_high", float("nan")) * 0.8

@@ -11,10 +11,33 @@ from strategies.screen_results import matching_rows, write_strategy_results
 
 
 class StrategyResultTests(unittest.TestCase):
+    def test_strategy_two_requires_market_cap_above_10000(self):
+        baseline = {
+            "symbol": "PASS",
+            "market_cap": 10001,
+            "market_price": 49,
+            "price_high_1y": 100,
+            "roce": 13,
+            "roe": 11,
+            "debt_equity": 0.6,
+            "sales_growth": 6,
+            "profit_growth": 6,
+            "operating_cash_flow": 1,
+            "pe": 24,
+        }
+        candidates = pd.DataFrame([
+            baseline,
+            {**baseline, "symbol": "AT-CAP-THRESHOLD", "market_cap": 10000},
+        ])
+
+        result = matching_rows(candidates, "strategy_2")
+
+        self.assertEqual(result["symbol"].tolist(), ["PASS"])
+
     def test_strategy_three_requires_quarterly_growth_and_promoter_holding(self):
         baseline = {
             "symbol": "PASS",
-            "market_cap": 2001,
+            "market_cap": 15000,
             "market_price": 74,
             "price_high_1y": 100,
             "roce": 16,
@@ -31,6 +54,7 @@ class StrategyResultTests(unittest.TestCase):
             baseline,
             {**baseline, "symbol": "LOW-QUARTERLY", "quarterly_sales_growth": 10},
             {**baseline, "symbol": "LOW-PROMOTER", "promoter_holding": 30},
+            {**baseline, "symbol": "AT-CAP-THRESHOLD", "market_cap": 10000},
         ])
 
         result = matching_rows(candidates, "strategy_3")
@@ -40,7 +64,7 @@ class StrategyResultTests(unittest.TestCase):
     def test_strategy_four_applies_fundamental_price_and_technical_conditions(self):
         baseline = {
             "symbol": "PASS",
-            "market_cap": 1001,
+            "market_cap": 15000,
             "market_price": 79,
             "price_high_1y": 100,
             "roce": 13,
@@ -59,6 +83,7 @@ class StrategyResultTests(unittest.TestCase):
             {**baseline, "symbol": "NO-QUARTERLY-GROWTH", "quarterly_profit_growth": 0},
             {**baseline, "symbol": "AT-PRICE-LIMIT", "market_price": 80},
             {**baseline, "symbol": "RSI-OUTSIDE-RANGE", "rsi14": 46},
+            {**baseline, "symbol": "AT-CAP-THRESHOLD", "market_cap": 10000},
         ])
 
         result = matching_rows(candidates, "strategy_4")
@@ -69,7 +94,7 @@ class StrategyResultTests(unittest.TestCase):
         strong = {
             "symbol": "STRONG",
             "name": "Strong Company",
-            "market_cap": 2000,
+            "market_cap": 15000,
             "roce": 20,
             "roe": 18,
             "debt_equity": 0.3,
@@ -106,10 +131,16 @@ class StrategyResultTests(unittest.TestCase):
         low_promoter_holding = {
             **strong, "symbol": "LOW-PROMOTER", "promoter_holding": 35
         }
+        at_market_cap_threshold = {
+            **strong, "symbol": "AT-CAP-THRESHOLD", "market_cap": 10000
+        }
 
         with tempfile.TemporaryDirectory() as temp_dir:
             paths = write_strategy_results(
-                pd.DataFrame([strong, falling_weak, no_correction, low_promoter_holding]),
+                pd.DataFrame([
+                    strong, falling_weak, no_correction, low_promoter_holding,
+                    at_market_cap_threshold,
+                ]),
                 temp_dir,
             )
 
@@ -140,7 +171,7 @@ class StrategyResultTests(unittest.TestCase):
             "symbol": "STRONG",
             "name": "Strong Company",
             "isin": pd.NA,
-            "market_cap": 2000,
+            "market_cap": 15000,
             "roce": 20,
             "roe": 18,
             "debt_equity": 0.3,
