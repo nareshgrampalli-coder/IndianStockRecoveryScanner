@@ -53,15 +53,14 @@ def run(strategy: str, input_path: str | Path, output_path: str | Path,
     symbol_to_isin = dict(zip(universe["symbol"], universe["isin"]))
     candidates["isin"] = candidates["symbol"].map(symbol_to_isin)
 
-    if strategy != "strategy_1":
-        provider = YahooProvider(settings["history_period"])
-        with ThreadPoolExecutor(max_workers=settings["technical_workers"]) as executor:
-            technical_rows = list(executor.map(
-                lambda symbol: technicals_for(symbol, provider),
-                candidates["symbol"],
-            ))
-        metrics = pd.DataFrame([row[0] for row in technical_rows], index=candidates.index)
-        candidates = pd.concat([candidates, metrics], axis=1)
+    provider = YahooProvider(settings["history_period"])
+    with ThreadPoolExecutor(max_workers=settings["technical_workers"]) as executor:
+        technical_rows = list(executor.map(
+            lambda symbol: technicals_for(symbol, provider),
+            candidates["symbol"],
+        ))
+    metrics = pd.DataFrame([row[0] for row in technical_rows], index=candidates.index)
+    candidates = pd.concat([candidates, metrics], axis=1)
 
     results = matching_rows(candidates, strategy)
     results["strategy_rule"] = strategy

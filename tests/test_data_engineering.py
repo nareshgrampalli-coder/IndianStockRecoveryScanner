@@ -48,6 +48,10 @@ class DataEngineeringTests(unittest.TestCase):
                 "Financial Period": "2023-12-31",
                 "Publication Date": "2024-02-01",
                 "ROCE": 20,
+                "Sales Growth 3Years": 25,
+                "Profit Growth 3Years": 26,
+                "Quarterly Sales Growth": 12,
+                "Quarterly Profit Growth": 14,
                 "ISIN": "INE000A01000",
             }]).to_csv(path, index=False)
             row = read_screener(path, "strategy_1").iloc[0]
@@ -55,6 +59,10 @@ class DataEngineeringTests(unittest.TestCase):
             self.assertEqual(row["financial_period"], "2023-12-31")
             self.assertEqual(row["publication_date"], "2024-02-01")
             self.assertEqual(row["data_provider"], "Screener.in")
+            self.assertEqual(row["quarterly_sales_growth"], 12)
+            self.assertEqual(row["quarterly_profit_growth"], 14)
+            self.assertEqual(row["sales_growth"], 25)
+            self.assertEqual(row["profit_growth"], 26)
             self.assertTrue(row["retrieved_at_utc"])
             self.assertLess(row["data_quality_score"], 100)
             self.assertIn("roe", row["financial_data_missing_fields"])

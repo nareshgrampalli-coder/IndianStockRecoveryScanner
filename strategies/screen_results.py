@@ -30,8 +30,8 @@ def matching_rows(candidates: pd.DataFrame, strategy: str) -> pd.DataFrame:
             rule_row["macd_bullish"] = (
                 str(row.get("macd_bullish", "")).strip().lower() == "true"
             )
-            rule_row["above_sma20"] = (
-                str(row.get("above_sma20", "")).strip().lower() == "true"
+            rule_row["above_ema20"] = (
+                str(row.get("above_ema20", "")).strip().lower() == "true"
             )
         if matcher(rule_row):
             matched.append(row)

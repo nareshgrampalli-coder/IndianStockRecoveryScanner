@@ -43,6 +43,7 @@ def technicals_for(symbol: str, provider: YahooProvider) -> tuple[dict, list[dic
     rsi_series = rsi(close)
     macd_line, signal_line = macd(close)
     averages = moving_averages(close)
+    ema20 = close.ewm(span=20, adjust=False).mean()
     average_volume = volume.rolling(20).mean()
     latest_volume_avg = average_volume.iloc[-1] if len(average_volume) else float("nan")
     latest_rsi = rsi_series.iloc[-1]
@@ -76,9 +77,11 @@ def technicals_for(symbol: str, provider: YahooProvider) -> tuple[dict, list[dic
                              and macd_line.iloc[-2] <= signal_line.iloc[-2]),
         "macd_above_signal": bool(macd_line.iloc[-1] > signal_line.iloc[-1]),
         "sma20": float(averages[20].iloc[-1]),
+        "ema20": float(ema20.iloc[-1]),
         "sma50": float(averages[50].iloc[-1]) if len(close) >= 50 else float("nan"),
         "sma200": float(averages[200].iloc[-1]) if len(close) >= 200 else float("nan"),
         "above_sma20": bool(close.iloc[-1] > averages[20].iloc[-1]),
+        "above_ema20": bool(close.iloc[-1] > ema20.iloc[-1]),
         "above_sma50": bool(close.iloc[-1] > averages[50].iloc[-1]) if len(close) >= 50 else float("nan"),
         "above_sma200": bool(close.iloc[-1] > averages[200].iloc[-1]) if len(close) >= 200 else float("nan"),
         "volume_ratio_20d": float(volume.iloc[-1] / latest_volume_avg)
@@ -123,6 +126,7 @@ def run(args: argparse.Namespace) -> Path:
     aggregate = {
         field: "first" for field in (
             "name", "roce", "roe", "sales_growth", "profit_growth", "debt_equity",
+            "quarterly_sales_growth", "quarterly_profit_growth",
             "operating_cash_flow", "pe", "market_cap", "promoter_holding", "promoter_pledging",
             "financial_basis", "financial_period", "publication_date", "data_provider",
             "retrieved_at_utc", "data_quality_score", "financial_data_missing_fields",
@@ -227,6 +231,7 @@ def run(args: argparse.Namespace) -> Path:
     for row in candidates.itertuples(index=False):
         payload_fields = (
             "roce", "roe", "sales_growth", "profit_growth", "debt_equity",
+            "quarterly_sales_growth", "quarterly_profit_growth",
             "operating_cash_flow", "pe", "market_cap", "promoter_holding",
             "promoter_pledging", "financial_data_missing_fields",
         )

@@ -15,6 +15,8 @@ ALIASES = {
     "roe": ("roe", "return on equity"),
     "sales_growth": ("sales growth", "sales growth 3years", "sales growth 5years"),
     "profit_growth": ("profit growth", "profit growth 3years", "profit growth 5years", "earnings growth"),
+    "quarterly_sales_growth": ("quarterly sales growth", "sales growth qtr"),
+    "quarterly_profit_growth": ("quarterly profit growth", "profit growth qtr"),
     "debt_equity": ("debt to equity", "debt/equity", "debt equity"),
     "operating_cash_flow": ("operating cash flow 3years", "operating cash flow", "cash from operating activity"),
     "pe": ("stock p/e", "price to earning", "price to earnings", "p/e", "pe"),
@@ -33,6 +35,11 @@ ALIASES = {
 
 def find_column(frame: pd.DataFrame, field: str) -> str | None:
     normalized = {normalize_header(col): col for col in frame.columns}
+    if field in {"sales_growth", "profit_growth"}:
+        normalized = {
+            header: original for header, original in normalized.items()
+            if not header.startswith("quarterly ")
+        }
     aliases = [normalize_header(alias) for alias in ALIASES[field]]
     for alias in aliases:
         if alias in normalized:
@@ -87,13 +94,15 @@ def read_screener(path: str | Path, strategy: str) -> pd.DataFrame:
         rows[field] = frame[column].astype("string").str.strip() if column else pd.NA
     rows["data_provider"] = "Screener.in"
     rows["retrieved_at_utc"] = datetime.now(timezone.utc).isoformat()
-    for field in ("roce", "roe", "sales_growth", "profit_growth", "debt_equity",
+    for field in ("roce", "roe", "sales_growth", "profit_growth",
+                  "quarterly_sales_growth", "quarterly_profit_growth", "debt_equity",
                   "operating_cash_flow", "pe", "market_cap", "promoter_holding",
                   "promoter_pledging"):
         column = find_column(frame, field)
         rows[field] = frame[column].map(number) if column else float("nan")
     quality_fields = [
         "roce", "roe", "sales_growth", "profit_growth", "debt_equity",
+        "quarterly_sales_growth", "quarterly_profit_growth",
         "operating_cash_flow", "pe", "market_cap", "promoter_holding",
         "promoter_pledging", "financial_period", "publication_date",
     ]

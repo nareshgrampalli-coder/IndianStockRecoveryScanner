@@ -7,5 +7,8 @@ def matches(row) -> bool:
         and row.get("debt_equity", float("nan")) < 0.5
         and row.get("sales_growth", float("nan")) > 10
         and row.get("profit_growth", float("nan")) > 10
+        and row.get("quarterly_sales_growth", float("nan")) > 10
+        and row.get("quarterly_profit_growth", float("nan")) > 10
         and row.get("pe", float("nan")) < 30
+        and row.get("promoter_holding", float("nan")) > 30
     )

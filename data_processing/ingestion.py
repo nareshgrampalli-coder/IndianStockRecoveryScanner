@@ -19,7 +19,8 @@ from database.repository import ScreeningRepository
 
 STRATEGIES = ("strategy_1", "strategy_2", "strategy_3", "strategy_4")
 FINANCIAL_FIELDS = (
-    "roce", "roe", "sales_growth", "profit_growth", "debt_equity",
+    "roce", "roe", "sales_growth", "profit_growth",
+    "quarterly_sales_growth", "quarterly_profit_growth", "debt_equity",
     "operating_cash_flow", "pe", "market_cap", "promoter_holding",
     "promoter_pledging",
 )
