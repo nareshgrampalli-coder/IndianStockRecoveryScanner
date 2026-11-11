@@ -1,0 +1,31 @@
+# Strategy 4: Technical reversal
+
+## Positional trading
+
+Screener.in has limited technical screening capabilities. Use this query for preliminary fundamental filtering, then confirm RSI, MACD and moving averages on TradingView.
+
+### Screener.in query
+
+```text
+Market Capitalization > 1000
+AND Current price < High price * 0.80
+AND Return on capital employed > 12
+AND Debt to equity < 0.7
+AND Sales growth > 5
+AND Profit growth > 5
+AND Quarterly profit growth > 0
+AND Price to Earning < 35
+```
+
+### Additional technical conditions
+
+| Indicator | Condition |
+|---|---|
+| RSI (14) | 30–45 |
+| MACD | Bullish crossover |
+| Price | Above 20-day EMA |
+| 50-day SMA | Price approaching or crossing above |
+| Volume | Above 1.5× 20-day average |
+| ADX | Above 20 preferred |
+
+These are confirmation criteria, not part of the Screener.in query.

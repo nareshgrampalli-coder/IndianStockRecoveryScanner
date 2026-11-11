@@ -24,7 +24,9 @@ python app.py `
   --output screening_results.xlsx
 ```
 
-The same command-line interface remains available through `screening_workflow.py`. Settings such as the universe URL, history period, and worker count are in `config/settings.yaml`.
+Each Screener CSV must explicitly identify every row as `Consolidated` using a `Statement Type` or `Financial Basis` column. Standalone or unspecified statements are rejected. Include `Financial Period` and `Publication Date` as separate columns for point-in-time backtests; rows without parseable dates are excluded from those backtests. Other metric columns may be absent, but missing values are flagged and remain unscored.
+
+The same screening command is available through the backward-compatible `screening_workflow.py` entry point. Run either command with `--help` for all options. Runtime settings, including history periods, worker count, security mapping path, and SQLite path, are in `config/settings.yaml`.
 
 ## Full-universe ingestion
 
@@ -40,7 +42,13 @@ python ingest_data.py `
   --bhavcopy-csv path\to\nse_bhavcopy.csv
 ```
 
-The Bhavcopy argument is optional. The job writes normalized stock and daily-price CSVs plus an ingestion-error report, and persists the data in SQLite. Yahoo Finance is the currently configured history adapter; the architecture document records the remaining DhanHQ credentials, instrument mapping, and corporate-action verification required for production use.
+The Bhavcopy argument is optional; when provided, the CSV must contain ISIN, trade date, and close price columns. The job writes:
+
+- `normalized_data/normalized_stocks.csv`: one row per Nifty 500 constituent with canonical ISIN, all four strategy memberships, financial fields, provenance, quality, and price-validation status.
+- `normalized_data/normalized_daily_prices.csv`: raw and adjusted daily OHLCV history.
+- `normalized_data/ingestion_errors.csv`: per-symbol download or normalization errors.
+
+It also persists security mappings, price bars, and consolidated financial observations in the SQLite database configured in `config/settings.yaml` (default: `data/screening.sqlite3`). Yahoo Finance is the currently configured history adapter; see [the architecture guide](docs/architecture.md) for DhanHQ prerequisites and data-source limitations.
 
 The workbook contains `Ranked Watchlist`, `Top 15 Research`, `Combined Screen Imports`, `Nifty 500 Universe`, and `Scoring & Sources` sheets. Strategy membership and flags are retained for each stock: Strategy 3 is the primary screen, Strategy 1 the quality filter, Strategy 4 the entry-timing filter, and Strategy 2 the deep-value list. Combined score determines ranking, with these strategy flags used as tie-breakers. The first 15 ranked stocks are a research shortlist, not a buy recommendation.
 
@@ -53,6 +61,23 @@ The workbook contains `Ranked Watchlist`, `Top 15 Research`, `Combined Screen Im
 - ISIN is the canonical identifier. `config/stock_universe.csv` maintains ISIN, company name, NSE symbol and BSE symbol mappings; NSE constituent downloads must include ISIN.
 - Screening runs persist security mappings, raw/adjusted price bars, and consolidated financial observations with provider, retrieval time and data-quality metadata in the configured SQLite database.
 - Fundamental backtests must use `backtest_with_fundamentals`; it rebuilds each signal from prices and consolidated financial observations published before and reported by that session date. Same-day publications and records without parseable period/publication dates are excluded to avoid daily-bar lookahead.
+
+## Tests
+
+Run the unit tests with:
+
+```powershell
+python -m unittest discover -s tests -v
+```
+
+## Documentation
+
+- [Architecture and data sources](docs/architecture.md)
+- [Screening workflow](docs/screening-workflow.md)
+- [Strategy 1: Quality correction](docs/strategies/quality-correction.md)
+- [Strategy 2: Deep value](docs/strategies/deep-value.md)
+- [Strategy 3: Recovery 30–50%](docs/strategies/recovery-30-50.md)
+- [Strategy 4: Technical reversal](docs/strategies/technical-reversal.md)
 
 ## Scoring outline
 

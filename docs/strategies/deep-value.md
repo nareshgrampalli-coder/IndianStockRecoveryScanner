@@ -1,9 +1,12 @@
-Contrarian investing
+# Strategy 2: Deep value
+
+## Contrarian investing
+
 Find heavily beaten-down companies with positive fundamentals.
 
-Screener query
+### Screener.in query
 
-
+```text
 Market Capitalization > 1000
 AND Current price < High price * 0.50
 AND Return on capital employed > 12
@@ -13,9 +16,12 @@ AND Sales growth 3Years > 5
 AND Profit growth 3Years > 5
 AND Operating cash flow 3years > 0
 AND Price to Earning < 25
+```
 
-What it finds:
+### What it finds
+
 - Stocks down at least 50% from their recorded high.
 - Companies with positive historical profitability.
 - Potential valuation-recovery candidates.
-Be particularly careful about companies whose earnings have structurally deteriorated.
+
+> Review carefully for companies with structurally deteriorating earnings.

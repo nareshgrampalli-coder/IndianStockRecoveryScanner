@@ -1,9 +1,10 @@
-Primary strategy
-This is the screen I would prioritize for your 6–12 month investment horizon.
+# Strategy 3: Recovery 30–50%
 
-Screener query
+This is the primary screen for a 6–12 month investment horizon.
 
+## Screener.in query
 
+```text
 Market Capitalization > 2000
 AND Current price < High price * 0.75
 AND Return on capital employed > 15
@@ -15,10 +16,11 @@ AND Quarterly sales growth > 10
 AND Quarterly profit growth > 10
 AND Price to Earning < 30
 AND Promoter holding > 30
+```
 
-What it finds:
+## What it finds
+
 - Stocks down at least 25%.
 - Improving quarterly performance.
 - Strong historical capital efficiency.
 - Companies potentially capable of earnings-led recovery.
-This is the best starting screen for your objective.
