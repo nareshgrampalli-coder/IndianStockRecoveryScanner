@@ -111,6 +111,11 @@ Filings ────┘                                              ↓
 
 ## Data handling considerations
 
+- Use ISIN as the canonical security identifier and maintain NSE/BSE symbol mappings in the security master.
+- Preserve raw and adjusted OHLC; calculate indicators and drawdowns only from corporate-action-adjusted values.
+- Use consolidated financial statements consistently. Retain the reporting period separately from the publication date and retrieval timestamp.
+- Point-in-time fundamental backtests must only expose consolidated observations whose reporting period is no later than the session and whose publication date is before it (same-day publication timing is unknown).
+- Record provider, retrieval time, and completeness-based data quality for price and financial data. Keep missing financial values as unavailable and report them rather than scoring them as zero.
 - Persist source and as-of timestamps with imported prices and fundamentals; values from different providers may refer to different dates.
 - Track corporate actions and index membership changes when comparing historical snapshots.
 - Preserve the provider/source associated with each field so results can be checked against exchange data or filings.

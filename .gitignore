@@ -10,6 +10,7 @@ env/
 # Local screening data and generated workbooks
 *.csv
 screening_results.xlsx
+data/*.sqlite3
 
 # Local environment settings
 .env

@@ -3,13 +3,20 @@
 
 import argparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import json
 from datetime import datetime, timezone
 from pathlib import Path
 import sys
 
 import pandas as pd
 
+from data_processing.corporate_actions import apply_adjustments
+from data_processing.data_validator import validate_prices
 from data_processing.financial_cleaner import normalize_company
+from data_processing.price_cleaner import clean_prices
+from data_processing.security_master import apply_security_mappings, load_security_mappings
+from database.models import FundamentalObservation, PriceBar, SecurityMapping
+from database.repository import ScreeningRepository
 from data_sources.nse_provider import NSEProvider
 from data_sources.screener_importer import read_screener
 from data_sources.yahoo_provider import YahooProvider
@@ -26,6 +33,8 @@ DEFAULTS = {
     "request_timeout_seconds": 30,
     "technical_workers": 5,
     "history_period": "1y",
+    "database_path": "data/screening.sqlite3",
+    "security_master_path": "config/stock_universe.csv",
 }
 
 
@@ -44,24 +53,45 @@ def load_settings(path: Path) -> dict:
     return settings
 
 
-def technicals_for(symbol: str, provider: YahooProvider) -> dict:
+def technicals_for(symbol: str, provider: YahooProvider) -> tuple[dict, list[dict]]:
     try:
-        history = provider.history(symbol)
+        history = clean_prices(provider.history(symbol))
+        prices = apply_adjustments(history)
+        validate_prices(prices)
     except Exception as exc:
-        return {"technical_error": str(exc)[:240]}
-    if history.empty or len(history) < 30:
-        return {"technical_error": "Insufficient Yahoo Finance price history"}
-    close, volume = history["Close"].dropna(), history["Volume"].dropna()
+        return {"technical_error": str(exc)[:240]}, []
+    close, volume = prices["close"].dropna(), prices["volume"].dropna()
+    if prices.empty or len(close) < 30:
+        return {"technical_error": "Insufficient Yahoo Finance price history"}, []
     rsi_series = rsi(close)
     macd_line, signal_line = macd(close)
     averages = moving_averages(close)
     average_volume = volume.rolling(20).mean()
     latest_volume_avg = average_volume.iloc[-1] if len(average_volume) else float("nan")
     latest_rsi = rsi_series.iloc[-1]
-    return {
+    retrieved_at = datetime.now(timezone.utc).isoformat()
+    raw_columns = ["raw_open", "raw_high", "raw_low", "raw_close"]
+    adjusted_columns = ["adjusted_open", "adjusted_high", "adjusted_low", "adjusted_close"]
+    quality_columns = raw_columns + adjusted_columns + ["volume", "adjustment_factor"]
+    bars = [
+        {
+            "session_date": index.strftime("%Y-%m-%d"),
+            **{column: float(row[column]) for column in raw_columns + adjusted_columns
+               if pd.notna(row[column])},
+            "volume": float(row["volume"]) if pd.notna(row["volume"]) else None,
+            "adjustment_factor": float(row["adjustment_factor"]),
+            "data_quality_score": float(row[quality_columns].notna().mean() * 100),
+            "retrieved_at_utc": retrieved_at,
+        }
+        for index, row in prices.iterrows()
+    ]
+    metrics = {
         "price_asof": close.index[-1].strftime("%Y-%m-%d"),
         "market_price": float(close.iloc[-1]),
         "price_high_1y": float(close.max()),
+        "data_provider": "Yahoo Finance",
+        "price_retrieved_at_utc": retrieved_at,
+        "price_data_quality_score": bars[-1]["data_quality_score"],
         "rsi14": float(latest_rsi) if pd.notna(latest_rsi) else float("nan"),
         "macd": float(macd_line.iloc[-1]),
         "macd_signal": float(signal_line.iloc[-1]),
@@ -78,6 +108,7 @@ def technicals_for(symbol: str, provider: YahooProvider) -> dict:
         if pd.notna(latest_volume_avg) and latest_volume_avg != 0 else float("nan"),
         "support_20d": float(close.tail(20).min()),
     }
+    return metrics, bars
 
 
 def run(args: argparse.Namespace) -> Path:
@@ -94,13 +125,18 @@ def run(args: argparse.Namespace) -> Path:
     universe = NSEProvider(
         settings["universe_url"], settings["request_timeout_seconds"]
     ).nifty500()
+    mappings = load_security_mappings(settings["security_master_path"])
+    universe = apply_security_mappings(universe, mappings)
     universe_symbols = set(universe["symbol"])
+    isin_to_symbol = dict(zip(universe["isin"], universe["symbol"]))
     name_to_symbol = {
         normalize_company(name): symbol
         for name, symbol in zip(universe["nifty_name"], universe["symbol"])
     }
     imports["symbol"] = imports.apply(
-        lambda row: row["symbol"] if row["symbol"] in universe_symbols
+        lambda row: isin_to_symbol.get(row["isin"], "")
+        if pd.notna(row.get("isin"))
+        else row["symbol"] if row["symbol"] in universe_symbols
         else name_to_symbol.get(normalize_company(row["name"]), ""),
         axis=1,
     )
@@ -111,9 +147,19 @@ def run(args: argparse.Namespace) -> Path:
         field: "first" for field in (
             "name", "roce", "roe", "sales_growth", "profit_growth", "debt_equity",
             "operating_cash_flow", "pe", "market_cap", "promoter_holding", "promoter_pledging",
+            "financial_basis", "financial_period", "publication_date", "data_provider",
+            "retrieved_at_utc", "data_quality_score", "financial_data_missing_fields",
         )
     }
-    imports = imports.sort_values("strategy").groupby("symbol", as_index=False).agg(
+    imports["_publication_sort"] = pd.to_datetime(
+        imports["publication_date"], errors="coerce", utc=True
+    )
+    imports["_period_sort"] = pd.to_datetime(
+        imports["financial_period"], errors="coerce", utc=True
+    )
+    imports = imports.sort_values(
+        ["_publication_sort", "_period_sort"], ascending=False, na_position="last"
+    ).groupby("symbol", as_index=False).agg(
         {**aggregate, "strategy": lambda values: ", ".join(sorted(set(values)))}
     )
     candidates = imports.merge(universe, on="symbol", how="inner")
@@ -122,14 +168,17 @@ def run(args: argparse.Namespace) -> Path:
 
     candidates = score_fundamentals(candidates)
     provider = YahooProvider(settings["history_period"])
-    results = {}
+    results, price_bars = {}, {}
     with ThreadPoolExecutor(max_workers=settings["technical_workers"]) as executor:
         futures = {
             executor.submit(technicals_for, symbol, provider): index
             for index, symbol in candidates["symbol"].items()
         }
         for future in as_completed(futures):
-            results[futures[future]] = future.result()
+            index = futures[future]
+            metrics, bars = future.result()
+            results[index] = metrics
+            price_bars[index] = bars
     technical_data = pd.DataFrame.from_dict(results, orient="index").reindex(candidates.index)
     candidates = score_technicals(pd.concat([candidates, technical_data], axis=1))
     candidates = rank_candidates(candidates)
@@ -162,6 +211,10 @@ def run(args: argparse.Namespace) -> Path:
             ["RSI points", "30-45: 100; >45-60: 75; 25-<30: 50; other valid readings: 25."],
             ["MACD points", "100 for a fresh bullish MACD/signal crossover on the latest daily candle; otherwise 0 when data is available."],
             ["Technical support", "20-day closing low proxy; price within 5%: 100, within 10%: 75, otherwise 25."],
+            ["Canonical identifier", "ISIN identifies each company; NSE and BSE symbols are retained as mappings."],
+            ["Price storage", "Raw and adjusted OHLC are stored separately. Adjusted OHLC uses provider adjusted-close factors before indicator/drawdown calculation."],
+            ["Financial statement basis", "Only input rows explicitly labeled consolidated are accepted."],
+            ["Financial provenance", "Financial period, publication date, provider, retrieval timestamp and a completeness-based quality score are retained; missing metrics remain unavailable."],
             ["Caveat", "A screen/score is not investment advice. Verify company filings, timestamps, liquidity, corporate actions and risks."],
         ], columns=["Item", "Definition"])
         notes.to_excel(writer, sheet_name="Scoring & Sources", index=False)
@@ -172,6 +225,53 @@ def run(args: argparse.Namespace) -> Path:
                 letter = column[0].column_letter
                 width = min(max(max(len(str(cell.value or "")) for cell in column) + 2, 12), 42)
                 sheet.column_dimensions[letter].width = width
+
+    retrieved_at = datetime.now(timezone.utc).isoformat()
+    security_records = [
+        SecurityMapping(
+                isin=row.isin,
+                company_name=str(row.nifty_name),
+                nse_symbol=str(row.nse_symbol) if pd.notna(row.nse_symbol) else None,
+                bse_symbol=str(row.bse_symbol) if pd.notna(row.bse_symbol) else None,
+        )
+        for row in universe.itertuples(index=False)
+    ]
+    stored_prices = []
+    for index, bars in price_bars.items():
+        isin = candidates.loc[index, "isin"]
+        if pd.isna(isin):
+            continue
+        stored_prices.extend(
+            PriceBar(isin=str(isin), provider="Yahoo Finance", **bar)
+            for bar in bars
+        )
+    fundamental_records = []
+    for row in candidates.itertuples(index=False):
+        payload_fields = (
+            "roce", "roe", "sales_growth", "profit_growth", "debt_equity",
+            "operating_cash_flow", "pe", "market_cap", "promoter_holding",
+            "promoter_pledging", "financial_data_missing_fields",
+        )
+        payload = {
+            field: (None if pd.isna(getattr(row, field)) else getattr(row, field))
+            for field in payload_fields
+        }
+        fundamental_records.append(FundamentalObservation(
+            isin=str(row.isin),
+            financial_period=None if pd.isna(row.financial_period) else str(row.financial_period),
+            publication_date=None if pd.isna(row.publication_date) else str(row.publication_date),
+            financial_basis=str(row.financial_basis),
+            data_provider=str(row.data_provider),
+            retrieved_at_utc=(
+                str(row.retrieved_at_utc)
+                if pd.notna(row.retrieved_at_utc) else retrieved_at
+            ),
+            data_quality_score=float(row.data_quality_score),
+            payload=json.dumps(payload, default=str),
+        ))
+    ScreeningRepository(settings["database_path"]).save_market_data(
+        security_records, stored_prices, fundamental_records
+    )
     return output
 
 

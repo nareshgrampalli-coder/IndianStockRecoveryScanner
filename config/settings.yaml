@@ -3,3 +3,4 @@ request_timeout_seconds: 30
 technical_workers: 5
 history_period: 1y
 database_path: data/screening.sqlite3
+security_master_path: config/stock_universe.csv

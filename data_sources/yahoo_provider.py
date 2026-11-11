@@ -10,5 +10,6 @@ class YahooProvider:
 
     def history(self, symbol: str) -> pd.DataFrame:
         return yf.Ticker(f"{symbol}.NS").history(
-            period=self.period, auto_adjust=True, raise_errors=True, timeout=self.timeout
+            period=self.period, auto_adjust=False, actions=True,
+            raise_errors=True, timeout=self.timeout
         )

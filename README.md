@@ -4,9 +4,9 @@ This tool combines four Screener.in CSV exports into a deduplicated Nifty 500 wa
 
 ## Data sources and limits
 
-- Fundamentals and valuation metrics come from the supplied Screener.in exports. Export a CSV from each of the four saved screens. Include Symbol and the available metric columns (ROCE, ROE, sales growth, profit/earnings growth, debt/equity, operating cash flow, and P/E). Missing columns are reported as unavailable in scoring rather than fabricated.
+- Fundamentals and valuation metrics come from the supplied Screener.in exports. Export a CSV from each of the four saved screens. Include a `Statement Type` or `Financial Basis` column identifying every row as `Consolidated`, plus Symbol and the available metric columns. Exports without explicit consolidated metadata or containing standalone rows are rejected. Include financial period and publication date columns when available; these dates are retained separately and are required for use in historical fundamental backtests. Missing metrics remain unavailable (not zero-scored) and are listed with a completeness-based data-quality score.
 - Nifty 500 constituents are downloaded at run time from Nifty Indices.
-- RSI, MACD, moving averages, volume and 20-day support proxy are calculated from Yahoo Finance daily adjusted prices and volume, using NSE `.NS` symbols.
+- RSI, MACD, moving averages, volume and 20-day support proxy are calculated from corporate-action-adjusted Yahoo Finance prices and volume, using NSE `.NS` symbols. Raw and adjusted OHLC are both persisted.
 - The constituent list and market data require an internet connection. Yahoo Finance coverage or rate limits can leave individual technical metrics unavailable.
 - Screener fundamental values and Yahoo technicals may have different as-of dates; see each workbook row's `price_asof` and the scoring/sources sheet.
 
@@ -34,6 +34,9 @@ The workbook contains `Ranked Watchlist`, `Top 15 Research`, `Combined Screen Im
 - `data_processing/`, `indicators/`, `strategies/`, and `scoring/` hold reusable cleaning, indicator, screen-condition, scoring, and ranking functions.
 - `backtesting/` provides next-bar, long-only return calculations. `database/` provides a SQLite screening-result repository.
 - `config/` contains runtime settings and a stock-universe CSV template.
+- ISIN is the canonical identifier. `config/stock_universe.csv` maintains ISIN, company name, NSE symbol and BSE symbol mappings; NSE constituent downloads must include ISIN.
+- Screening runs persist security mappings, raw/adjusted price bars, and consolidated financial observations with provider, retrieval time and data-quality metadata in the configured SQLite database.
+- Fundamental backtests must use `backtest_with_fundamentals`; it rebuilds each signal from prices and consolidated financial observations published before and reported by that session date. Same-day publications and records without parseable period/publication dates are excluded to avoid daily-bar lookahead.
 
 ## Scoring outline
 
