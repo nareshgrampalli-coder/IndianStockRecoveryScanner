@@ -1,0 +1,33 @@
+# Nifty 500 Screening Workflow
+
+This tool combines four Screener.in CSV exports into a deduplicated Nifty 500 watchlist, enriches candidates with recent Yahoo Finance technicals, scores the available fundamental and technical metrics, and writes an Excel workbook.
+
+## Data sources and limits
+
+- Fundamentals and valuation metrics come from the supplied Screener.in exports. Export a CSV from each of the four saved screens. Include Symbol and the available metric columns (ROCE, ROE, sales growth, profit/earnings growth, debt/equity, operating cash flow, and P/E). Missing columns are reported as unavailable in scoring rather than fabricated.
+- Nifty 500 constituents are downloaded at run time from Nifty Indices.
+- RSI, MACD, moving averages, volume and 20-day support proxy are calculated from Yahoo Finance daily adjusted prices and volume, using NSE `.NS` symbols.
+- The constituent list and market data require an internet connection. Yahoo Finance coverage or rate limits can leave individual technical metrics unavailable.
+- Screener fundamental values and Yahoo technicals may have different as-of dates; see each workbook row's `price_asof` and the scoring/sources sheet.
+
+## Setup and run
+
+Use Python 3.10 or newer:
+
+```powershell
+python -m pip install -r requirements.txt
+python screening_workflow.py `
+  --strategy-1 path\to\strategy1.csv `
+  --strategy-2 path\to\strategy2.csv `
+  --strategy-3 path\to\strategy3.csv `
+  --strategy-4 path\to\strategy4.csv `
+  --output screening_results.xlsx
+```
+
+The workbook contains `Ranked Watchlist`, `Top 15 Research`, `Combined Screen Imports`, `Nifty 500 Universe`, and `Scoring & Sources` sheets. Strategy membership and flags are retained for each stock: Strategy 3 is the primary screen, Strategy 1 the quality filter, Strategy 4 the entry-timing filter, and Strategy 2 the deep-value list. Combined score determines ranking, with these strategy flags used as tie-breakers. The first 15 ranked stocks are a research shortlist, not a buy recommendation.
+
+## Scoring outline
+
+Each available factor is scored from 0 to 100. Fundamental and technical group scores are the mean of their available factors; the combined score equally weights the two groups. ROCE/ROE, growth, debt, cash flow and P/E thresholds, plus technical scoring rules, are documented in the workbook. The technical indicators are confirmation/monitoring signals; they do not replace company research.
+
+The tool does not automatically trade, make investment recommendations, or guarantee that a candidate is suitable. Check official filings and data freshness before relying on any result.
