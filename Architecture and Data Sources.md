@@ -78,19 +78,21 @@ The Python stock-screening and scoring engine combines results from the four str
 
 ## Recommended scoring model
 
-The final rank uses a 100-point weighted model across the four strategies:
+Each strategy uses a 100-point component-weight profile:
 
-| Component | Weight |
-|---|---:|
-| Financial quality | 25 |
-| Earnings growth | 20 |
-| Valuation attractiveness | 15 |
-| Technical recovery | 20 |
-| Price correction opportunity | 10 |
-| Risk and governance | 10 |
-| **Total** | **100** |
+| Component | Quality correction | Deep value | Recovery 30–50% | Technical reversal |
+|---|---:|---:|---:|---:|
+| Financial quality | 25 | 20 | 25 | 15 |
+| Earnings growth | 20 | 15 | 25 | 15 |
+| Valuation attractiveness | 15 | 25 | 15 | 10 |
+| Technical recovery | 20 | 15 | 15 | 35 |
+| Price correction opportunity | 10 | 10 | 10 | 15 |
+| Risk and governance | 10 | 15 | 10 | 10 |
+| **Total** | **100** | **100** | **100** | **100** |
 
-Each component is scored from 0 to 100, then multiplied by its weight. Missing components are excluded and the remaining weights are proportionally renormalized to a 100-point score; `score_coverage_pct` reports the sum of available original weights. Financial quality combines ROCE, ROE, and operating cash flow; earnings growth combines sales and profit growth; valuation uses P/E; technical recovery uses RSI, MACD, moving averages, volume, and support; correction uses drawdown from the highest Yahoo adjusted close in the available one-year history; risk/governance combines debt/equity with available promoter holding and pledging data.
+Each component is scored from 0 to 100, then multiplied by its strategy weight. Missing components are excluded and the remaining weights are proportionally renormalized to a 100-point score; `score_coverage_pct` reports average original-weight coverage. Financial quality combines ROCE, ROE, and operating cash flow; earnings growth combines sales and profit growth; valuation uses P/E; risk/governance combines debt/equity with available promoter holding and pledging data.
+
+Technical reversal uses a strategy-specific technical score: momentum is 50% of the component (RSI 40%, MACD 35%, moving averages 25%), volume is 30%, and support is 20%. Price-correction points use drawdown bands from the highest Yahoo adjusted close in the available one-year history, then are multiplied by the mean financial-quality and earnings-growth scores. A large drawdown without either business-recovery signal has no correction score. If a stock appears in multiple screens, its final score is the average of its applicable strategy-profile scores.
 
 ## Application architecture
 
