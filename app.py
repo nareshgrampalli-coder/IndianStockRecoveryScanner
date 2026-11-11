@@ -27,6 +27,7 @@ from indicators.rsi import rsi
 from scoring.final_ranker import rank_candidates
 from scoring.fundamental_score import score_fundamentals
 from scoring.technical_score import score_technicals
+from strategies.screen_results import write_strategy_results
 
 STRATEGIES = ("strategy_1", "strategy_2", "strategy_3", "strategy_4")
 def technicals_for(symbol: str, provider: YahooProvider) -> tuple[dict, list[dict]]:
@@ -159,6 +160,7 @@ def run(args: argparse.Namespace) -> Path:
     candidates = score_technicals(pd.concat([candidates, technical_data], axis=1))
     candidates = rank_candidates(candidates)
     candidates["screened_at_utc"] = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    write_strategy_results(candidates, args.strategy_results_dir)
 
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -256,6 +258,7 @@ def main(argv: list[str] | None = None) -> int:
     for strategy in STRATEGIES:
         parser.add_argument(f"--{strategy.replace('_', '-')}", dest=strategy, required=True)
     parser.add_argument("--output", default="screening_results.xlsx")
+    parser.add_argument("--strategy-results-dir", default="strategy_results")
     parser.add_argument("--settings", default="config/settings.yaml")
     args = parser.parse_args(argv)
     try:
@@ -264,6 +267,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
     print(f"Workbook written: {output.resolve()}")
+    print(f"Strategy result CSVs written to: {Path(args.strategy_results_dir).resolve()}")
     return 0
 
 
