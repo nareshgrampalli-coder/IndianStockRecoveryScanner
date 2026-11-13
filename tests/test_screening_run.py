@@ -143,11 +143,11 @@ class ScreeningRunTests(unittest.TestCase):
                 ["ABC"],
             )
             self.assertEqual(
-                pd.read_csv(results_dir / "strategy_1_results.csv")["symbol"].tolist(),
+                pd.read_csv(results_dir / "quality_correction_results.csv")["symbol"].tolist(),
                 ["ABC"],
             )
             self.assertEqual(
-                pd.read_csv(results_dir / "strategy_3_results.csv")["symbol"].tolist(),
+                pd.read_csv(results_dir / "recovery_30_50_results.csv")["symbol"].tolist(),
                 ["ABC"],
             )
             with closing(sqlite3.connect(database)) as connection:

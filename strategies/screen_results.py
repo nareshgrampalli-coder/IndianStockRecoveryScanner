@@ -92,7 +92,7 @@ def write_strategy_results(
         else:
             result = matching_rows(candidates, strategy)
         result["strategy_rule"] = strategy
-        path = output_dir / f"{strategy}_results.csv"
+        path = output_dir / f"{DISPLAY_NAMES[strategy].lower()}_results.csv"
         result.to_csv(path, index=False)
         results[strategy] = path
 

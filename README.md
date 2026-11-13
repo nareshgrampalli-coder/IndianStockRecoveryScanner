@@ -22,17 +22,17 @@ python -m pip install -r requirements.txt
 
 Choose one input workflow:
 
-- **Existing Screener workflow:** prepare four CSV exports, one for each strategy, with a `Statement Type` or `Financial Basis` column whose rows are all `Consolidated`; include a `Symbol` (or company name) column and relevant financial metrics. Save as `data\inputs\strategy1.csv` through `data\inputs\strategy4.csv`.
+- **Existing Screener workflow:** prepare four CSV exports, one for each strategy, with a `Statement Type` or `Financial Basis` column whose rows are all `Consolidated`; include a `Symbol` (or company name) column and relevant financial metrics. Save as `data\inputs\quality_correction.csv`, `data\inputs\deep_value.csv`, `data\inputs\recovery_30_50.csv`, and `data\inputs\technical_reversal.csv`. The daily PowerShell script also accepts the legacy `strategy1.csv`–`strategy4.csv` names.
 - **Free/hybrid workflow:** prepare one broad consolidated fundamentals export as `data\inputs\fundamentals.csv` and use the `--fundamentals-csv` command below. This lets the app apply the four strategy rules locally rather than requiring four strategy-specific exports.
 
 Generate the workbook:
 
 ```powershell
 python app.py `
-  --strategy-1 data\inputs\strategy1.csv `
-  --strategy-2 data\inputs\strategy2.csv `
-  --strategy-3 data\inputs\strategy3.csv `
-  --strategy-4 data\inputs\strategy4.csv `
+  --strategy-1 data\inputs\quality_correction.csv `
+  --strategy-2 data\inputs\deep_value.csv `
+  --strategy-3 data\inputs\recovery_30_50.csv `
+  --strategy-4 data\inputs\technical_reversal.csv `
   --output screening_results.xlsx
 ```
 
@@ -69,8 +69,8 @@ For example, run Strategy 3 by itself:
 ```powershell
 python screen_strategy.py `
   --strategy strategy_3 `
-  --input data\inputs\strategy3.csv `
-  --output strategy_results\strategy_3_results.csv
+  --input data\inputs\recovery_30_50.csv `
+  --output strategy_results\recovery_30_50_results.csv
 ```
 
 Use `strategy_1`, `strategy_2`, `strategy_3`, or `strategy_4` for `--strategy`. Strategies 1–3 use the financial fields from the input plus market price and one-year high from Yahoo; Strategy 4 also checks the fundamental prefilter and uses RSI, MACD, 20-day EMA, and volume data. The output folder is created automatically. For all four CSVs in one run, use the `python app.py` command above.
@@ -95,10 +95,10 @@ To normalize the full Nifty 500 universe, four consolidated fundamental exports,
 
 ```powershell
 python ingest_data.py `
-  --strategy-1 data\inputs\strategy1.csv `
-  --strategy-2 data\inputs\strategy2.csv `
-  --strategy-3 data\inputs\strategy3.csv `
-  --strategy-4 data\inputs\strategy4.csv `
+  --strategy-1 data\inputs\quality_correction.csv `
+  --strategy-2 data\inputs\deep_value.csv `
+  --strategy-3 data\inputs\recovery_30_50.csv `
+  --strategy-4 data\inputs\technical_reversal.csv `
   --output-dir normalized_data `
   --bhavcopy-csv data\inputs\nse_bhavcopy.csv
 ```

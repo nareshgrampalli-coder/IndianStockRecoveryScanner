@@ -7,12 +7,21 @@ if (-not (Test-Path $python -PathType Leaf)) {
     throw "Virtual-environment Python not found: $python"
 }
 
-$inputs = @(
-    "data\inputs\strategy1.csv",
-    "data\inputs\strategy2.csv",
-    "data\inputs\strategy3.csv",
-    "data\inputs\strategy4.csv"
+$inputDefinitions = @(
+    @{ Preferred = "data\inputs\quality_correction.csv"; Legacy = "data\inputs\strategy1.csv" },
+    @{ Preferred = "data\inputs\deep_value.csv"; Legacy = "data\inputs\strategy2.csv" },
+    @{ Preferred = "data\inputs\recovery_30_50.csv"; Legacy = "data\inputs\strategy3.csv" },
+    @{ Preferred = "data\inputs\technical_reversal.csv"; Legacy = "data\inputs\strategy4.csv" }
 )
+$inputs = foreach ($definition in $inputDefinitions) {
+    if (Test-Path $definition.Preferred -PathType Leaf) {
+        $definition.Preferred
+    } elseif (Test-Path $definition.Legacy -PathType Leaf) {
+        $definition.Legacy
+    } else {
+        throw "Screener export not found: $($definition.Preferred)"
+    }
+}
 $today = (Get-Date).Date
 foreach ($inputFile in $inputs) {
     if (-not (Test-Path $inputFile -PathType Leaf)) {

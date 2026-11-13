@@ -22,15 +22,15 @@ The app maps the export to the Nifty 500 universe, fetches available Yahoo Finan
 ### Existing Screener workflow: four strategy exports
 
 1. Run each documented Screener.in strategy query and export its consolidated results.
-2. Save the files as `data\inputs\strategy1.csv` through `data\inputs\strategy4.csv`.
+2. Save the files as `data\inputs\quality_correction.csv`, `data\inputs\deep_value.csv`, `data\inputs\recovery_30_50.csv`, and `data\inputs\technical_reversal.csv`.
 3. Run:
 
 ```powershell
 python app.py `
-  --strategy-1 data\inputs\strategy1.csv `
-  --strategy-2 data\inputs\strategy2.csv `
-  --strategy-3 data\inputs\strategy3.csv `
-  --strategy-4 data\inputs\strategy4.csv `
+  --strategy-1 data\inputs\quality_correction.csv `
+  --strategy-2 data\inputs\deep_value.csv `
+  --strategy-3 data\inputs\recovery_30_50.csv `
+  --strategy-4 data\inputs\technical_reversal.csv `
   --output screening_results.xlsx
 ```
 

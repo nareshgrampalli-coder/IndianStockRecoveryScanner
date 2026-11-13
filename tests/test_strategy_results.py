@@ -161,8 +161,17 @@ class StrategyResultTests(unittest.TestCase):
             self.assertEqual(set(paths), {
                 "strategy_1", "strategy_2", "strategy_3", "strategy_4"
             })
+            self.assertEqual(
+                {strategy: path.name for strategy, path in paths.items()},
+                {
+                    "strategy_1": "quality_correction_results.csv",
+                    "strategy_2": "deep_value_results.csv",
+                    "strategy_3": "recovery_30_50_results.csv",
+                    "strategy_4": "technical_reversal_results.csv",
+                },
+            )
             results = {
-                strategy: pd.read_csv(path)
+                strategy:                 pd.read_csv(path)
                 for strategy, path in paths.items()
             }
 
@@ -203,9 +212,9 @@ class StrategyResultTests(unittest.TestCase):
         }])
 
         with tempfile.TemporaryDirectory() as temp_dir:
-            input_path = Path(temp_dir) / "strategy1.csv"
+            input_path = Path(temp_dir) / "quality_correction.csv"
             input_path.write_text("placeholder", encoding="utf-8")
-            output_path = Path(temp_dir) / "results" / "strategy_1_results.csv"
+            output_path = Path(temp_dir) / "results" / "quality_correction_results.csv"
             with patch("screen_strategy.read_screener", return_value=source_rows), \
                     patch("screen_strategy.NSEProvider") as nse_provider, \
                     patch(
