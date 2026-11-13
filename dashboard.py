@@ -76,8 +76,48 @@ def build_dashboard_payload(frame: pd.DataFrame) -> dict:
     }
 
 
+def build_provisional_payload(frame: pd.DataFrame) -> dict:
+    required = {
+        "rank", "company", "provisional_score",
+        "provisional_component_coverage_pct", "market_cap_over_10000",
+        "source_strategies",
+    }
+    missing = sorted(required - set(frame.columns))
+    if missing:
+        raise ValueError(
+            "Provisional ranking is missing required columns: " + ", ".join(missing)
+        )
+
+    records = [
+        {key: json_value(value) for key, value in row.items()}
+        for row in frame.to_dict(orient="records")
+    ]
+    records.sort(
+        key=lambda item: (
+            item.get("rank") is None,
+            item.get("rank") if item.get("rank") is not None else float("inf"),
+        )
+    )
+    return {
+        "summary": {
+            "companies": len(records),
+            "below_market_cap_threshold": sum(
+                record["market_cap_over_10000"] is False for record in records
+            ),
+            "average_component_coverage_pct": (
+                float(frame["provisional_component_coverage_pct"].mean())
+                if not frame.empty else None
+            ),
+        },
+        "stocks": records,
+    }
+
+
 class DashboardHandler(BaseHTTPRequestHandler):
     workbook_path = ROOT / "screening_results.xlsx"
+    provisional_ranking_path = (
+        ROOT / "strategy_results" / "partial_analysis" / "provisional_final_ranking.csv"
+    )
 
     def do_GET(self):
         route = urlparse(self.path).path
@@ -85,14 +125,30 @@ class DashboardHandler(BaseHTTPRequestHandler):
             self._send_data("screens")
         elif route == "/api/dashboard":
             self._send_data("dashboard")
+        elif route == "/api/provisional-ranking":
+            self._send_provisional_data()
         elif route in {"/", "/screens"}:
             self._send_file(WEB_ROOT / "index.html")
         elif route == "/dashboard":
             self._send_file(WEB_ROOT / "dashboard.html")
+        elif route == "/provisional-ranking":
+            self._send_file(WEB_ROOT / "provisional.html")
         elif route in {"/app.js", "/styles.css"}:
             self._send_file(WEB_ROOT / route.lstrip("/"))
         else:
             self.send_error(404)
+
+    def _send_provisional_data(self):
+        try:
+            if not self.provisional_ranking_path.is_file():
+                raise FileNotFoundError(
+                    f"{self.provisional_ranking_path} was not found. "
+                    "Generate the provisional ranking before opening this page."
+                )
+            frame = pd.read_csv(self.provisional_ranking_path)
+            self._send_json(build_provisional_payload(frame))
+        except (OSError, ValueError, KeyError) as exc:
+            self._send_json({"error": str(exc)}, status=503)
 
     def _send_data(self, view: str):
         try:

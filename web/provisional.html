@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Provisional Ranking</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body data-view="provisional">
+  <header class="topbar">
+    <a class="brand" href="/">Indian Stock Recovery Scanner</a>
+    <nav aria-label="Main navigation">
+      <a href="/">Four strategy screens</a>
+      <a href="/dashboard">Final dashboard</a>
+      <a class="active" href="/provisional-ranking">Provisional ranking</a>
+    </nav>
+  </header>
+  <main>
+    <section class="page-heading">
+      <div>
+        <p class="eyebrow">COPIED SCREENER TABLES · PARTIAL DATA</p>
+        <h1>Provisional final ranking</h1>
+        <p id="provisional-count">Loading provisional ranking…</p>
+      </div>
+      <a class="button-link secondary" href="/dashboard">View full-data dashboard <span aria-hidden="true">→</span></a>
+    </section>
+    <section class="notice">
+      <strong>Provisional only</strong>
+      <span>Scores use available ROCE/ROE, quarterly growth, P/E, and price drawdown. Missing components are excluded and coverage is not full-data completeness. Symbols, ISINs, data dates, and several strategy checks are unavailable. This is not a validated strategy result or investment recommendation.</span>
+    </section>
+    <section class="section-heading">
+      <div>
+        <h2>Ranked companies</h2>
+        <p>Market capitalization is a screen-threshold check, not a score component. Conflicting copied values and unavailable score components are shown.</p>
+      </div>
+      <label class="search-wrap">Search companies or source screens
+        <input id="search" type="search" placeholder="Company or strategy">
+      </label>
+    </section>
+    <div id="status" class="status" role="status">Loading provisional ranking…</div>
+    <p id="result-count" class="muted"></p>
+    <section class="table-wrap">
+      <table class="wide-table provisional-table">
+        <thead>
+          <tr>
+            <th>Rank</th><th>Company</th><th>Provisional score</th>
+            <th>Quality</th><th>Quarterly growth</th><th>Valuation</th><th>Price correction</th>
+            <th>CMP</th><th>Market cap (Cr)</th><th>Cap &gt; 10,000 Cr</th>
+            <th>Drawdown</th><th>Component coverage</th><th>Source screens</th>
+            <th>Unavailable components</th><th>Conflicting values</th>
+          </tr>
+        </thead>
+        <tbody id="provisional-rows"></tbody>
+      </table>
+    </section>
+  </main>
+  <footer>Research support only · Verify current filings, prices, and risk before making investment decisions.</footer>
+</body>
+</html>

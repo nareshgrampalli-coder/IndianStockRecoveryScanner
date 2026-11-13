@@ -2,7 +2,7 @@ import unittest
 
 import pandas as pd
 
-from dashboard import build_dashboard_payload
+from dashboard import build_dashboard_payload, build_provisional_payload
 
 
 class DashboardTests(unittest.TestCase):
@@ -42,6 +42,29 @@ class DashboardTests(unittest.TestCase):
         self.assertEqual(
             [row["symbol"] for row in payload["final_candidates"]],
             ["AAA", "BBB", "CCC", "DDD"],
+        )
+
+    def test_provisional_dashboard_payload_keeps_partial_coverage_and_threshold(self):
+        payload = build_provisional_payload(pd.DataFrame([
+            {
+                "rank": 2, "company": "Beta", "provisional_score": 80,
+                "provisional_component_coverage_pct": 80,
+                "market_cap_over_10000": False,
+                "source_strategies": "deep_value",
+            },
+            {
+                "rank": 1, "company": "Alpha", "provisional_score": 95,
+                "provisional_component_coverage_pct": 100,
+                "market_cap_over_10000": True,
+                "source_strategies": "quality_correction",
+            },
+        ]))
+
+        self.assertEqual(payload["summary"]["companies"], 2)
+        self.assertEqual(payload["summary"]["below_market_cap_threshold"], 1)
+        self.assertEqual(
+            [row["company"] for row in payload["stocks"]],
+            ["Alpha", "Beta"],
         )
 
 

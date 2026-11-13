@@ -47,6 +47,7 @@ input:focus, select:focus { outline: 2px solid #8ccfbd; border-color: #17836d; }
 .table-wrap { width: 100%; overflow: auto; border: 1px solid #dfe6ea; border-radius: 8px; background: white; box-shadow: 0 2px 8px #1835480a; }
 table { width: 100%; min-width: 900px; border-collapse: collapse; text-align: left; }
 .wide-table { min-width: 1080px; }
+.provisional-table { min-width: 1650px; }
 th, td { padding: 13px 15px; border-bottom: 1px solid #edf0f2; white-space: nowrap; }
 th { position: sticky; top: 0; background: #f7f9fa; color: #647684; font-size: 11px; text-transform: uppercase; letter-spacing: .055em; }
 th small { font-size: 10px; text-transform: none; letter-spacing: 0; }

@@ -153,6 +153,47 @@ function renderFinalTable(stocks) {
   }
 }
 
+function renderProvisionalTable(stocks) {
+  const body = document.getElementById("provisional-rows");
+  const query = document.getElementById("search").value.trim().toLowerCase();
+  const filtered = stocks.filter((stock) =>
+    [stock.company, stock.source_strategies]
+      .some((value) => safeText(value).toLowerCase().includes(query))
+  );
+  body.replaceChildren();
+  for (const stock of filtered) {
+    const row = document.createElement("tr");
+    const capThreshold = stock.market_cap_over_10000 == null
+      ? "Unknown"
+      : stock.market_cap_over_10000 ? "Yes" : "No";
+    const values = [
+      stock.rank ?? "—",
+      stock.company ?? "—",
+      displayNumber(stock.provisional_score),
+      displayNumber(stock.business_quality_score),
+      displayNumber(stock.quarterly_growth_score),
+      displayNumber(stock.valuation_score),
+      displayNumber(stock.price_correction_score),
+      displayNumber(stock.market_price, 2),
+      displayNumber(stock.market_cap, 0),
+      capThreshold,
+      displayPercent(stock.drawdown_pct),
+      displayPercent(stock.provisional_component_coverage_pct),
+      stock.source_strategies ?? "—",
+      stock.unavailable_components || "—",
+      stock.conflicting_source_values || "—",
+    ];
+    for (const value of values) {
+      const cell = document.createElement("td");
+      cell.textContent = safeText(value);
+      row.append(cell);
+    }
+    body.append(row);
+  }
+  document.getElementById("result-count").textContent =
+    `${filtered.length} of ${stocks.length} companies`;
+}
+
 async function startScreens() {
   const result = await getJson("/api/screens");
   const render = () => renderScreenTable(result.stocks);
@@ -171,9 +212,21 @@ async function startDashboard() {
   renderFinalTable(result.final_candidates);
 }
 
+async function startProvisionalRanking() {
+  const result = await getJson("/api/provisional-ranking");
+  document.getElementById("provisional-count").textContent =
+    `${result.summary.companies} companies · ${result.summary.below_market_cap_threshold} below the market-cap screen threshold`;
+  document.getElementById("search").addEventListener("input", () =>
+    renderProvisionalTable(result.stocks)
+  );
+  renderProvisionalTable(result.stocks);
+  statusMessage("");
+}
+
 async function start() {
   try {
     if (document.body.dataset.view === "dashboard") await startDashboard();
+    else if (document.body.dataset.view === "provisional") await startProvisionalRanking();
     else await startScreens();
   } catch (error) {
     statusMessage(error.message, true);
