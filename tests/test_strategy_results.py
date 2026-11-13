@@ -11,6 +11,20 @@ from strategies.screen_results import matching_rows, write_strategy_results
 
 
 class StrategyResultTests(unittest.TestCase):
+    def test_strategy_evaluation_shows_named_progress_bar(self):
+        progress = {}
+
+        def capture_progress(iterable, **kwargs):
+            progress.update(kwargs)
+            return iterable
+
+        with patch("strategies.screen_results.tqdm", side_effect=capture_progress):
+            matching_rows(pd.DataFrame([{"symbol": "TEST"}]), "strategy_2")
+
+        self.assertEqual(progress["desc"], "Evaluating Deep Value")
+        self.assertEqual(progress["total"], 1)
+        self.assertEqual(progress["unit"], "stock")
+
     def test_strategy_two_requires_market_cap_above_10000(self):
         baseline = {
             "symbol": "PASS",

@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import pandas as pd
+from tqdm import tqdm
 
 from strategies.deep_value import matches as deep_value_matches
 from strategies.quality_correction import matches as quality_correction_matches
@@ -19,6 +20,10 @@ DISPLAY_NAMES = {
     "strategy_3": "Recovery_30_50",
     "strategy_4": "Technical_Reversal",
 }
+STRATEGY_NAMES = {
+    strategy: name.replace("_", " ")
+    for strategy, name in DISPLAY_NAMES.items()
+}
 
 
 def matching_rows(candidates: pd.DataFrame, strategy: str) -> pd.DataFrame:
@@ -29,7 +34,12 @@ def matching_rows(candidates: pd.DataFrame, strategy: str) -> pd.DataFrame:
         raise ValueError(f"Unknown strategy: {strategy}") from exc
 
     matched_indices = []
-    for index, row in candidates.iterrows():
+    for index, row in tqdm(
+        candidates.iterrows(),
+        total=len(candidates),
+        desc=f"Evaluating {STRATEGY_NAMES[strategy]}",
+        unit="stock",
+    ):
         rule_row = row.to_dict()
         rule_row["52_week_high"] = row.get("price_high_1y")
         if strategy == "strategy_4":
@@ -76,7 +86,11 @@ def write_strategy_results(
     results = {}
 
     for strategy in MATCHERS:
-        result = matching_rows(candidates, strategy)
+        membership_column = f"{strategy}_screen_pass"
+        if membership_column in candidates.columns:
+            result = candidates[candidates[membership_column]].copy()
+        else:
+            result = matching_rows(candidates, strategy)
         result["strategy_rule"] = strategy
         path = output_dir / f"{strategy}_results.csv"
         result.to_csv(path, index=False)

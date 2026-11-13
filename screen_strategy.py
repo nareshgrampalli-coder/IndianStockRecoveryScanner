@@ -2,12 +2,13 @@
 """Run one implemented strategy against a consolidated Screener CSV."""
 
 import argparse
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 import sys
 
 import pandas as pd
+from tqdm import tqdm
 
 from app import technicals_for
 from config.runtime import load_settings
@@ -15,7 +16,7 @@ from data_processing.financial_cleaner import normalize_company
 from data_sources.nse_provider import NSEProvider
 from data_sources.screener_importer import read_screener
 from data_sources.yahoo_provider import YahooProvider
-from strategies.screen_results import MATCHERS, matching_rows
+from strategies.screen_results import MATCHERS, DISPLAY_NAMES, matching_rows
 
 
 def run(strategy: str, input_path: str | Path, output_path: str | Path,
@@ -55,10 +56,19 @@ def run(strategy: str, input_path: str | Path, output_path: str | Path,
 
     provider = YahooProvider(settings["history_period"])
     with ThreadPoolExecutor(max_workers=settings["technical_workers"]) as executor:
-        technical_rows = list(executor.map(
-            lambda symbol: technicals_for(symbol, provider),
-            candidates["symbol"],
-        ))
+        futures = {
+            executor.submit(technicals_for, symbol, provider): index
+            for index, symbol in candidates["symbol"].items()
+        }
+        technical_rows = {}
+        for future in tqdm(
+            as_completed(futures),
+            total=len(futures),
+            desc=f"Fetching Yahoo Finance data ({DISPLAY_NAMES[strategy].replace('_', ' ')})",
+            unit="stock",
+        ):
+            technical_rows[futures[future]] = future.result()
+    technical_rows = [technical_rows[index] for index in candidates.index]
     metrics = pd.DataFrame([row[0] for row in technical_rows], index=candidates.index)
     candidates = pd.concat([candidates, metrics], axis=1)
 
