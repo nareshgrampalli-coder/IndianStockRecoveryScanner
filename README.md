@@ -116,10 +116,10 @@ It also persists security mappings, price bars, and consolidated financial obser
 After generating the workbook, start the local dashboard:
 
 ```powershell
-python dashboard.py --workbook screening_results.xlsx
+python dashboard.py
 ```
 
-Open `http://127.0.0.1:8000/` for the searchable strategy results, `http://127.0.0.1:8000/dashboard` for the consolidated final ranking, or `http://127.0.0.1:8000/provisional-ranking` for the provisional ranking from copied Screener tables. The provisional page reads `strategy_results\partial_analysis\provisional_final_ranking.csv`; it is separate from the workbook-backed ranking and displays available-field scores, coverage, and market-cap threshold status. Verify current data before considering a trade. Stop the local server with `Ctrl+C`.
+The dashboard uses `screening_results.xlsx` by default. Open `http://127.0.0.1:8000/` for the searchable strategy results, `http://127.0.0.1:8000/dashboard` for the consolidated final ranking, or `http://127.0.0.1:8000/provisional-ranking` for the provisional ranking from copied Screener tables. The provisional page reads `strategy_results\partial_analysis\provisional_final_ranking.csv`; it is separate from the workbook-backed ranking and displays available-field scores, coverage, and market-cap threshold status. Verify current data before considering a trade. Stop the local server with `Ctrl+C`.
 
 ## Project modules
 
