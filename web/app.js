@@ -215,7 +215,7 @@ async function startDashboard() {
 async function startProvisionalRanking() {
   const result = await getJson("/api/provisional-ranking");
   document.getElementById("provisional-count").textContent =
-    `${result.summary.companies} companies · ${result.summary.below_market_cap_threshold} below the market-cap screen threshold`;
+    `${result.summary.companies} companies · all above ₹10,000 Cr market cap`;
   document.getElementById("search").addEventListener("input", () =>
     renderProvisionalTable(result.stocks)
   );

@@ -119,7 +119,7 @@ After generating the workbook, start the local dashboard:
 python dashboard.py
 ```
 
-The dashboard uses `screening_results.xlsx` by default. Open `http://127.0.0.1:8000/` for the searchable strategy results, `http://127.0.0.1:8000/dashboard` for the consolidated final ranking, or `http://127.0.0.1:8000/provisional-ranking` for the provisional ranking from copied Screener tables. The provisional page reads `strategy_results\partial_analysis\provisional_final_ranking.csv`; it is separate from the workbook-backed ranking and displays available-field scores, coverage, and market-cap threshold status. Verify current data before considering a trade. Stop the local server with `Ctrl+C`.
+The dashboard uses `screening_results.xlsx` by default. Open `http://127.0.0.1:8000/` for the searchable strategy results, `http://127.0.0.1:8000/dashboard` for the consolidated final ranking, or `http://127.0.0.1:8000/provisional-ranking` for the provisional ranking from copied Screener tables. The provisional page reads the four descriptive CSVs from `data\inputs\` (or falls back to the matching files in `strategy_results\`), accepts tab-separated copied tables, and refreshes the ranking when opened. It includes only companies with market capitalization strictly greater than ₹10,000 Cr. This path is separate from the workbook-backed strategy workflow; its provisional scores use only fields available in the copied tables. Verify current data before considering a trade. Stop the local server with `Ctrl+C`.
 
 ## Project modules
 

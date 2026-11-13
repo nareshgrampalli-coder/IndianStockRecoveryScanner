@@ -10,6 +10,8 @@ from urllib.parse import urlparse
 
 import pandas as pd
 
+from data_processing.provisional_ranking import build_provisional_ranking
+
 ROOT = Path(__file__).resolve().parent
 WEB_ROOT = ROOT / "web"
 STRATEGIES = {
@@ -115,6 +117,8 @@ def build_provisional_payload(frame: pd.DataFrame) -> dict:
 
 class DashboardHandler(BaseHTTPRequestHandler):
     workbook_path = ROOT / "screening_results.xlsx"
+    provisional_input_dir = ROOT / "data" / "inputs"
+    provisional_result_dir = ROOT / "strategy_results"
     provisional_ranking_path = (
         ROOT / "strategy_results" / "partial_analysis" / "provisional_final_ranking.csv"
     )
@@ -140,12 +144,11 @@ class DashboardHandler(BaseHTTPRequestHandler):
 
     def _send_provisional_data(self):
         try:
-            if not self.provisional_ranking_path.is_file():
-                raise FileNotFoundError(
-                    f"{self.provisional_ranking_path} was not found. "
-                    "Generate the provisional ranking before opening this page."
-                )
-            frame = pd.read_csv(self.provisional_ranking_path)
+            frame = build_provisional_ranking(
+                self.provisional_input_dir,
+                self.provisional_result_dir,
+                self.provisional_ranking_path,
+            )
             self._send_json(build_provisional_payload(frame))
         except (OSError, ValueError, KeyError) as exc:
             self._send_json({"error": str(exc)}, status=503)
