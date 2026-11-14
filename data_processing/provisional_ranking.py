@@ -299,9 +299,14 @@ def build_provisional_ranking(
         available_weights.gt(0)
     )
     candidates["provisional_component_coverage_pct"] = available_weights
-    candidates["unavailable_components"] = candidates[score_fields].isna().apply(
-        lambda row: ";".join(row.index[row].tolist()), axis=1
-    )
+    if candidates.empty:
+        candidates["unavailable_components"] = pd.Series(
+            index=candidates.index, dtype="object"
+        )
+    else:
+        candidates["unavailable_components"] = candidates[score_fields].isna().apply(
+            lambda row: ";".join(row.index[row].tolist()), axis=1
+        )
     candidates = candidates.sort_values(
         [
             "provisional_score", "provisional_component_coverage_pct",

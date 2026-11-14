@@ -111,6 +111,33 @@ class ProvisionalRankingTests(unittest.TestCase):
         self.assertIn("Company", screens[0]["columns"])
         self.assertEqual(ranking["company"].tolist(), ["Quality Company"])
 
+    def test_empty_ranking_returns_columns_without_unavailable_components_error(self):
+        headers = ["Company", "Mar Cap Rs.Cr."]
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            input_dir = root / "data" / "inputs"
+            results_dir = root / "strategy_results"
+            input_dir.mkdir(parents=True)
+            results_dir.mkdir(parents=True)
+            for name in (
+                "quality_correction", "deep_value",
+                "recovery_30_50", "technical_reversal",
+            ):
+                pd.DataFrame(columns=headers).to_csv(
+                    results_dir / f"{name}_results.csv",
+                    sep="\t",
+                    index=False,
+                )
+
+            ranking = build_provisional_ranking(
+                input_dir,
+                results_dir,
+                root / "partial_analysis" / "ranking.csv",
+            )
+
+        self.assertTrue(ranking.empty)
+        self.assertIn("unavailable_components", ranking.columns)
+
 
 if __name__ == "__main__":
     unittest.main()
