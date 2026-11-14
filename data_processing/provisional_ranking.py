@@ -63,10 +63,12 @@ def _read_table(path: Path) -> pd.DataFrame:
     if not path.is_file():
         raise FileNotFoundError(f"Screener table not found: {path}")
     if path.stat().st_size == 0:
-        raise ValueError(f"Screener table is empty: {path}")
+        return _empty_table(path)
     try:
         frame = pd.read_csv(path, sep=None, engine="python", encoding="utf-8-sig")
-    except (pd.errors.EmptyDataError, pd.errors.ParserError) as exc:
+    except pd.errors.EmptyDataError:
+        return _empty_table(path)
+    except pd.errors.ParserError as exc:
         raise ValueError(f"Could not parse copied Screener table: {path}: {exc}") from exc
     if frame.empty and len(frame.columns) == 0:
         raise ValueError(f"Screener table has no headers: {path}")
@@ -93,6 +95,13 @@ def _read_table(path: Path) -> pd.DataFrame:
         rows[field] = frame.loc[rows.index, column].map(number) if column else float("nan")
     rows["source_file"] = path.name
     return rows
+
+
+def _empty_table(path: Path) -> pd.DataFrame:
+    columns = ["company", "symbol", "isin", *NUMERIC_FIELDS, "source_file"]
+    frame = pd.DataFrame(columns=columns)
+    frame["source_file"] = path.name
+    return frame
 
 
 def _score_band(value: float, top: float, middle: float, low: float) -> float:

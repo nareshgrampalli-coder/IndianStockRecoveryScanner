@@ -54,6 +54,41 @@ class ProvisionalRankingTests(unittest.TestCase):
             self.assertTrue((saved["market_cap"] > 10000).all())
             self.assertNotIn("Threshold Company", saved["company"].tolist())
 
+    def test_empty_strategy_table_does_not_block_other_strategies(self):
+        headers = [
+            "S.No.", "Company", "CMP Rs.", "P/E", "Mar Cap Rs.Cr.",
+            "ROCE %", "ROE %", "52w High Rs.",
+        ]
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            input_dir = root / "data" / "inputs"
+            results_dir = root / "strategy_results"
+            input_dir.mkdir(parents=True)
+            results_dir.mkdir(parents=True)
+
+            pd.DataFrame([
+                ["1.", "Quality Company", 50, 20, 12000, 20, 18, 100],
+            ], columns=headers).to_csv(
+                results_dir / "quality_correction_results.csv",
+                sep="\t",
+                index=False,
+            )
+            (results_dir / "deep_value_results.csv").write_bytes(b"")
+            for name in ("recovery_30_50", "technical_reversal"):
+                pd.DataFrame(columns=headers).to_csv(
+                    results_dir / f"{name}_results.csv",
+                    sep="\t",
+                    index=False,
+                )
+
+            ranking = build_provisional_ranking(
+                input_dir,
+                results_dir,
+                root / "partial_analysis" / "ranking.csv",
+            )
+
+        self.assertEqual(ranking["company"].tolist(), ["Quality Company"])
+
 
 if __name__ == "__main__":
     unittest.main()
