@@ -6,6 +6,13 @@
     }
   },
   "rewrites": [
-    { "source": "/(.*)", "destination": "/api" }
+    { "source": "/", "destination": "/api?path=/" },
+    { "source": "/upload", "destination": "/api?path=/upload" },
+    { "source": "/copied-screens", "destination": "/api?path=/copied-screens" },
+    { "source": "/provisional-ranking", "destination": "/api?path=/provisional-ranking" },
+    { "source": "/app.js", "destination": "/api?path=/app.js" },
+    { "source": "/styles.css", "destination": "/api?path=/styles.css" },
+    { "source": "/api/copied-screens", "destination": "/api?path=/api/copied-screens" },
+    { "source": "/api/provisional-ranking", "destination": "/api?path=/api/provisional-ranking" }
   ]
 }

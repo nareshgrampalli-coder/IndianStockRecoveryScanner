@@ -4,7 +4,7 @@ import json
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 from dashboard import (
     build_copied_screens_payload,
@@ -22,7 +22,8 @@ WEB_ROOT = ROOT / "web"
 
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
-        route = urlparse(self.path).path
+        parsed = urlparse(self.path)
+        route = parse_qs(parsed.query).get("path", [parsed.path])[0]
         pages = {
             "/": "upload.html",
             "/upload": "upload.html",
@@ -50,7 +51,8 @@ class handler(BaseHTTPRequestHandler):
             self.send_error(404)
 
     def do_POST(self):
-        route = urlparse(self.path).path
+        parsed = urlparse(self.path)
+        route = parse_qs(parsed.query).get("path", [parsed.path])[0]
         if route not in {"/api/copied-screens", "/api/provisional-ranking"}:
             self._send_json({"error": "Not found."}, 404)
             return
