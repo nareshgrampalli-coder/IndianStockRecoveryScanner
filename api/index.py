@@ -87,6 +87,13 @@ class handler(BaseHTTPRequestHandler):
                             screen["source_file"] = item["name"]
                     result = build_copied_screens_payload(screens)
                 else:
+                    screens = read_copied_screener_screens(input_dir, result_dir)
+                    for screen in screens:
+                        item = uploaded.get(
+                            STRATEGY_SOURCES[screen["strategy"]][0], {}
+                        )
+                        if isinstance(item, dict) and item.get("name"):
+                            screen["source_file"] = item["name"]
                     frame = build_provisional_ranking(
                         input_dir, result_dir, root / "provisional-ranking.csv"
                     )
@@ -104,6 +111,14 @@ class handler(BaseHTTPRequestHandler):
                             )
                         )
                     result = build_provisional_payload(frame)
+                    result["sources"] = [
+                        {
+                            "strategy": screen["title"],
+                            "file": screen["source_file"],
+                            "rows": len(screen["rows"]),
+                        }
+                        for screen in screens
+                    ]
             self._send_json(result, 200)
         except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError) as exc:
             self._send_json({"error": str(exc)}, 400)

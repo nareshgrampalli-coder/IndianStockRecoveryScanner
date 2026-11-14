@@ -446,12 +446,6 @@ async function startDashboard() {
 }
 
 async function startProvisionalRanking() {
-  const result = await getJson("/api/provisional-ranking");
-  document.getElementById("provisional-count").textContent =
-    `${result.summary.companies} companies · all above ₹10,000 Cr market cap`;
-  document.getElementById("search").addEventListener("input", () =>
-    renderProvisionalTable(result.stocks)
-  );
   const scoreDialog = document.getElementById("score-explanation");
   document.getElementById("close-score-explanation").addEventListener("click", () =>
     scoreDialog.close()
@@ -466,8 +460,38 @@ async function startProvisionalRanking() {
   scoreDialog.addEventListener("click", (event) => {
     if (event.target === scoreDialog) scoreDialog.close();
   });
-  renderProvisionalTable(result.stocks);
-  statusMessage("");
+  const refreshButton = document.getElementById("refresh-ranking");
+  let stocks = [];
+  const refreshRanking = async () => {
+    refreshButton.disabled = true;
+    statusMessage("Refreshing ranking from the files saved in this browser…");
+    try {
+      const result = await getJson("/api/provisional-ranking");
+      document.getElementById("provisional-count").textContent =
+        `${result.summary.companies} companies · all above ₹10,000 Cr market cap`;
+      document.getElementById("provisional-sources").textContent =
+        `Inputs: ${(result.sources || []).map((source) =>
+          `${source.file} (${source.rows} rows)`
+        ).join(" · ")}`;
+      stocks = result.stocks;
+      renderProvisionalTable(stocks);
+      statusMessage("");
+    } finally {
+      refreshButton.disabled = false;
+    }
+  };
+  document.getElementById("search").addEventListener("input", () =>
+    renderProvisionalTable(stocks)
+  );
+  refreshButton.addEventListener("click", () => {
+    refreshRanking().catch((error) => statusMessage(error.message, true));
+  });
+  window.addEventListener("pageshow", (event) => {
+    if (event.persisted) {
+      refreshRanking().catch((error) => statusMessage(error.message, true));
+    }
+  });
+  await refreshRanking();
 }
 
 function renderCopiedScreen(screen) {

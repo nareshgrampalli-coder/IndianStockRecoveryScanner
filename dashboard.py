@@ -169,12 +169,25 @@ class DashboardHandler(BaseHTTPRequestHandler):
 
     def _send_provisional_data(self):
         try:
+            screens = read_copied_screener_screens(
+                self.provisional_input_dir,
+                self.provisional_result_dir,
+            )
             frame = build_provisional_ranking(
                 self.provisional_input_dir,
                 self.provisional_result_dir,
                 self.provisional_ranking_path,
             )
-            self._send_json(build_provisional_payload(frame))
+            payload = build_provisional_payload(frame)
+            payload["sources"] = [
+                {
+                    "strategy": screen["title"],
+                    "file": screen["source_file"],
+                    "rows": len(screen["rows"]),
+                }
+                for screen in screens
+            ]
+            self._send_json(payload)
         except (OSError, ValueError, KeyError) as exc:
             self._send_json({"error": str(exc)}, status=503)
 
