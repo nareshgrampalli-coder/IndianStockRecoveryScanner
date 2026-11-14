@@ -5,9 +5,63 @@ const strategyFields = [
   ["strategy_2_deep_value", "S2"],
 ];
 
+const provisionalComponents = [
+  {
+    field: "business_quality_score",
+    label: "Business quality",
+    weight: 25,
+    rule: "ROCE and ROE score 100 at 20% or above, 75 at 15% or above, 50 at 12% or above, otherwise 0; available scores are averaged.",
+    inputs: [
+      ["ROCE", "roce", "roce_score", "percent"],
+      ["ROE", "roe", "roe_score", "percent"],
+    ],
+  },
+  {
+    field: "quarterly_growth_score",
+    label: "Quarterly growth",
+    weight: 25,
+    rule: "Quarterly sales and profit growth score 100 at 15% or above, 75 at 10% or above, 50 at 5% or above, otherwise 0; available scores are averaged.",
+    inputs: [
+      ["Quarterly sales growth", "quarterly_sales_growth", "quarterly_sales_growth_score", "percent"],
+      ["Quarterly profit growth", "quarterly_profit_growth", "quarterly_profit_growth_score", "percent"],
+    ],
+  },
+  {
+    field: "valuation_score",
+    label: "Value / dividend yield",
+    weight: 20,
+    rule: "P/E scores 100 through 20, 75 through 25, 50 through 35, otherwise 0. Dividend yield scores 100 at 5% or above, 75 at 3%, 50 at 1%, 25 above 0%, and 50 at 0%; available scores are averaged.",
+    inputs: [
+      ["P/E", "pe", "pe_score", "number"],
+      ["Dividend yield", "dividend_yield", "dividend_yield_score", "percent"],
+    ],
+  },
+  {
+    field: "payout_sustainability_score",
+    label: "Payout sustainability",
+    weight: 15,
+    rule: "Payout ratio scores 100 through 60%, 75 through 80%, 50 through 100%, and 0 above 100%.",
+    inputs: [["Payout ratio", "payout_ratio", "payout_sustainability_score", "percent"]],
+  },
+  {
+    field: "price_correction_score",
+    label: "Price correction",
+    weight: 15,
+    rule: "Drawdown from the 52-week high scores 100 at 50% or more, 75 at 35%, 50 at 25%, 25 at 15%, otherwise 0.",
+    inputs: [["Drawdown from 52-week high", "drawdown_pct", "price_correction_score", "percent"]],
+  },
+];
+let activeScoreTrigger = null;
+
 function displayNumber(value, digits = 1) {
   if (value === null || value === undefined || value === "") return "—";
   return Number.isFinite(Number(value)) ? Number(value).toFixed(digits) : "—";
+}
+
+function numericValue(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 function displayPercent(value) {
@@ -167,36 +221,58 @@ function renderProvisionalTable(stocks) {
       ? "Unknown"
       : stock.market_cap_over_10000 ? "Yes" : "No";
     const values = [
+      stock.market_price,
+      stock.market_cap,
+      capThreshold,
+      stock.drawdown_pct,
+      stock.provisional_component_coverage_pct,
+      stock.roce,
+      stock.roe,
+      stock.quarterly_sales_growth,
+      stock.quarterly_profit_growth,
+      stock.pe,
+      stock.dividend_yield,
+      stock.payout_ratio,
+      stock.quarterly_net_profit,
+      stock.quarterly_sales,
+      stock.quarterly_net_margin_pct,
+      stock.daily_volume,
+      stock.daily_return_pct,
+      stock.source_strategies ?? "—",
+      stock.unavailable_components || "—",
+      stock.conflicting_source_values || "—",
+    ];
+    const leadingValues = [
       stock.rank ?? "—",
       stock.company ?? "—",
-      displayNumber(stock.provisional_score),
+    ];
+    for (const value of leadingValues) {
+      const cell = document.createElement("td");
+      cell.textContent = safeText(value);
+      row.append(cell);
+    }
+    const scoreCell = document.createElement("td");
+    const scoreLink = document.createElement("button");
+    scoreLink.type = "button";
+    scoreLink.className = "score-link";
+    scoreLink.textContent = displayNumber(stock.provisional_score, 2);
+    scoreLink.setAttribute("aria-controls", "score-explanation");
+    scoreLink.setAttribute("aria-haspopup", "dialog");
+    scoreLink.setAttribute("aria-expanded", "false");
+    scoreLink.setAttribute("aria-label", `Explain provisional score for ${safeText(stock.company)}`);
+    scoreLink.addEventListener("click", () =>
+      showProvisionalScoreExplanation(stock, scoreLink)
+    );
+    scoreCell.append(scoreLink);
+    row.append(scoreCell);
+    const scoredValues = [
       displayNumber(stock.business_quality_score),
       displayNumber(stock.quarterly_growth_score),
       displayNumber(stock.valuation_score),
       displayNumber(stock.payout_sustainability_score),
       displayNumber(stock.price_correction_score),
-      displayNumber(stock.market_price, 2),
-      displayNumber(stock.market_cap, 0),
-      capThreshold,
-      displayPercent(stock.drawdown_pct),
-      displayPercent(stock.provisional_component_coverage_pct),
-      displayPercent(stock.roce),
-      displayPercent(stock.roe),
-      displayPercent(stock.quarterly_sales_growth),
-      displayPercent(stock.quarterly_profit_growth),
-      displayNumber(stock.pe, 2),
-      displayPercent(stock.dividend_yield),
-      displayPercent(stock.payout_ratio),
-      displayNumber(stock.quarterly_net_profit, 2),
-      displayNumber(stock.quarterly_sales, 2),
-      displayPercent(stock.quarterly_net_margin_pct),
-      displayNumber(stock.daily_volume, 0),
-      displayPercent(stock.daily_return_pct),
-      stock.source_strategies ?? "—",
-      stock.unavailable_components || "—",
-      stock.conflicting_source_values || "—",
     ];
-    for (const value of values) {
+    for (const value of [...scoredValues, ...values]) {
       const cell = document.createElement("td");
       cell.textContent = safeText(value);
       row.append(cell);
@@ -205,6 +281,70 @@ function renderProvisionalTable(stocks) {
   }
   document.getElementById("result-count").textContent =
     `${filtered.length} of ${stocks.length} companies`;
+}
+
+function showProvisionalScoreExplanation(stock, trigger) {
+  const section = document.getElementById("score-explanation");
+  const breakdown = document.getElementById("score-breakdown");
+  if (activeScoreTrigger) activeScoreTrigger.setAttribute("aria-expanded", "false");
+  activeScoreTrigger = trigger;
+  activeScoreTrigger.setAttribute("aria-expanded", "true");
+  const coverage = provisionalComponents.reduce(
+    (total, component) => numericValue(stock[component.field]) !== null
+      ? total + component.weight
+      : total,
+    0,
+  );
+  const weightedPoints = provisionalComponents.reduce(
+    (total, component) => {
+      const score = numericValue(stock[component.field]);
+      return score !== null ? total + score * component.weight : total;
+    },
+    0,
+  );
+  document.getElementById("score-explanation-title").textContent =
+    `${stock.company} · provisional score ${displayNumber(stock.provisional_score, 2)}`;
+  document.getElementById("score-explanation-equation").textContent =
+    coverage
+      ? `Score = ${displayNumber(weightedPoints, 2)} weighted points ÷ ${coverage}% available component weight = ${displayNumber(stock.provisional_score, 2)}. Coverage is ${coverage}% of the provisional model, not completeness of company data.`
+      : "No score components are available for this company.";
+  breakdown.replaceChildren();
+
+  for (const component of provisionalComponents) {
+    const score = numericValue(stock[component.field]);
+    const item = document.createElement("li");
+    const heading = document.createElement("strong");
+    heading.textContent = component.label;
+    item.append(heading);
+    if (score === null) {
+      item.append(document.createTextNode(` — unavailable; ${component.weight}% base weight omitted.`));
+    } else {
+      const effectiveWeight = component.weight / coverage * 100;
+      const contribution = score * component.weight / coverage;
+      item.append(document.createTextNode(
+        ` — ${displayNumber(score, 2)}/100; base weight ${component.weight}%; ` +
+        `normalized weight ${displayNumber(effectiveWeight, 2)}%; ` +
+        `contributes ${displayNumber(contribution, 2)} points.`
+      ));
+    }
+    const rule = document.createElement("p");
+    rule.className = "score-rule";
+    rule.textContent = component.rule;
+    item.append(rule);
+    const inputs = document.createElement("p");
+    inputs.className = "muted";
+    inputs.textContent = component.inputs.map(([label, field, scoreField, format]) => {
+      const value = stock[field];
+      const inputScore = numericValue(stock[scoreField]);
+      const formatted = format === "percent"
+        ? displayPercent(value)
+        : displayNumber(value, 2);
+      return `${label}: ${formatted} (${inputScore !== null ? `${displayNumber(inputScore, 2)} score points` : "not scored"})`;
+    }).join(" · ");
+    item.append(inputs);
+    breakdown.append(item);
+  }
+  if (!section.open) section.showModal();
 }
 
 async function startScreens() {
@@ -232,6 +372,20 @@ async function startProvisionalRanking() {
   document.getElementById("search").addEventListener("input", () =>
     renderProvisionalTable(result.stocks)
   );
+  const scoreDialog = document.getElementById("score-explanation");
+  document.getElementById("close-score-explanation").addEventListener("click", () =>
+    scoreDialog.close()
+  );
+  scoreDialog.addEventListener("close", () => {
+    if (activeScoreTrigger) {
+      activeScoreTrigger.setAttribute("aria-expanded", "false");
+      activeScoreTrigger.focus();
+      activeScoreTrigger = null;
+    }
+  });
+  scoreDialog.addEventListener("click", (event) => {
+    if (event.target === scoreDialog) scoreDialog.close();
+  });
   renderProvisionalTable(result.stocks);
   statusMessage("");
 }

@@ -28,8 +28,18 @@
     </section>
     <section class="notice">
       <strong>Provisional only</strong>
-      <span>Scores use available ROCE/ROE, quarterly growth, P/E/dividend yield, payout sustainability, and price drawdown. Quarterly net profit/sales, net margin, 1-day volume, and 1-day return are also shown. Missing scoring components are excluded; one-day volume/return are context only. Coverage is not full-data completeness. This is not a validated strategy result or investment recommendation.</span>
+      <span>Click a provisional score to see its inputs, component weights, thresholds, missing components, and weighted calculation. Quarterly net profit/sales, net margin, 1-day volume, and 1-day return are shown as context; one-day figures are not scored. Coverage is not full-data completeness. This is not a validated strategy result or investment recommendation.</span>
     </section>
+    <dialog id="score-explanation" class="score-modal" aria-labelledby="score-explanation-title">
+      <div class="score-explanation-heading">
+        <div>
+          <h2 id="score-explanation-title"></h2>
+          <p id="score-explanation-equation"></p>
+        </div>
+        <button id="close-score-explanation" class="secondary-button" type="button">Close</button>
+      </div>
+      <ol id="score-breakdown"></ol>
+    </dialog>
     <section class="section-heading">
       <div>
         <h2>Ranked companies</h2>
