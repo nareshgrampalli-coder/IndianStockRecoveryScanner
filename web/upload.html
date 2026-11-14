@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Upload Screener Tables</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body data-view="upload">
+  <header class="topbar">
+    <a class="brand" href="/">Indian Stock Recovery Scanner</a>
+    <nav aria-label="Main navigation">
+      <a class="active" href="/upload">Upload files</a>
+      <a href="/copied-screens">Copied Screener tables</a>
+      <a href="/provisional-ranking">Provisional ranking</a>
+    </nav>
+  </header>
+  <main>
+    <section class="page-heading">
+      <div>
+        <p class="eyebrow">YOUR BROWSER · PRIVATE UPLOADS</p>
+        <h1>Upload Screener tables</h1>
+        <p>Choose the CSV or tab-separated file for each strategy. The selected file's name is shown below; its contents stay in this browser and are sent only when you open a table or ranking.</p>
+      </div>
+    </section>
+    <section class="notice">
+      <strong>Per-browser storage</strong>
+      <span>Files are not stored on the server or shared with other users. Clearing this browser's site data removes them. Each file must be at most 900 KB; CSV and TSV content are both supported regardless of extension.</span>
+    </section>
+    <form id="upload-form" class="upload-grid">
+      <label class="upload-card">Quality Correction <small>Expected slot: quality_correction.csv</small>
+        <input type="file" data-file-key="quality_correction.csv" accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values">
+        <span class="upload-file-name" data-name-for="quality_correction.csv">No file selected</span>
+      </label>
+      <label class="upload-card">Deep Value <small>Expected slot: deep_value.csv</small>
+        <input type="file" data-file-key="deep_value.csv" accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values">
+        <span class="upload-file-name" data-name-for="deep_value.csv">No file selected</span>
+      </label>
+      <label class="upload-card">Recovery 30-50 <small>Expected slot: recovery_30_50.csv</small>
+        <input type="file" data-file-key="recovery_30_50.csv" accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values">
+        <span class="upload-file-name" data-name-for="recovery_30_50.csv">No file selected</span>
+      </label>
+      <label class="upload-card">Technical Reversal <small>Expected slot: technical_reversal.csv</small>
+        <input type="file" data-file-key="technical_reversal.csv" accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values">
+        <span class="upload-file-name" data-name-for="technical_reversal.csv">No file selected</span>
+      </label>
+      <div class="upload-actions">
+        <button class="button-link upload-submit" type="submit">Save files in this browser</button>
+        <button id="clear-uploads" class="secondary-button" type="button">Clear saved files</button>
+        <a class="button-link secondary" href="/copied-screens">View uploaded tables →</a>
+        <a class="button-link secondary" href="/provisional-ranking">Open provisional ranking →</a>
+      </div>
+    </form>
+    <div id="status" class="status" role="status" hidden></div>
+  </main>
+  <footer>Uploaded files remain local to this browser and are not shared across users or devices.</footer>
+</body>
+</html>

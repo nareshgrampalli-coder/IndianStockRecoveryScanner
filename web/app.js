@@ -94,9 +94,89 @@ function statusMessage(message, isError = false) {
 
 async function getJson(endpoint) {
   const response = await fetch(endpoint, { cache: "no-store" });
+  let result = await response.json();
+  if (
+    response.status === 400 &&
+    result.error?.includes("Upload the Screener files") &&
+    ["/api/copied-screens", "/api/provisional-ranking"].includes(endpoint)
+  ) {
+    result = await postUploadedFiles(endpoint);
+  } else if (!response.ok) {
+    throw new Error(result.error || `Request failed (${response.status})`);
+  }
+  return result;
+}
+
+function uploadedFiles() {
+  try {
+    return JSON.parse(localStorage.getItem("screenerUploads") || "{}");
+  } catch {
+    throw new Error("Saved upload data is invalid. Clear it and upload the files again.");
+  }
+}
+
+async function postUploadedFiles(endpoint) {
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ files: uploadedFiles() }),
+    cache: "no-store",
+  });
   const result = await response.json();
   if (!response.ok) throw new Error(result.error || `Request failed (${response.status})`);
   return result;
+}
+
+function startUploadPage() {
+  const storageKey = "screenerUploads";
+  const form = document.getElementById("upload-form");
+  const saved = uploadedFiles();
+  const updateName = (key, name) => {
+    const target = document.querySelector(`[data-name-for="${key}"]`);
+    if (target) target.textContent = name || "No file selected";
+  };
+  for (const input of form.querySelectorAll('input[type="file"]')) {
+    const key = input.dataset.fileKey;
+    updateName(key, saved[key]?.name);
+    input.addEventListener("change", async () => {
+      const file = input.files[0];
+      if (!file) return;
+      if (file.size > 900_000) {
+        input.value = "";
+        statusMessage(`${file.name} is larger than the 900 KB per-file limit.`, true);
+        return;
+      }
+      try {
+        saved[key] = { name: file.name, content: await file.text() };
+        localStorage.setItem(storageKey, JSON.stringify(saved));
+        updateName(key, file.name);
+        statusMessage(`${file.name} saved in this browser.`);
+      } catch (error) {
+        statusMessage(`Could not save ${file.name}: ${error.message}`, true);
+      }
+    });
+  }
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const count = Object.keys(uploadedFiles()).length;
+    statusMessage(
+      count
+        ? `${count} file${count === 1 ? "" : "s"} saved in this browser. You can now view the copied tables or ranking.`
+        : "Choose at least one CSV or TSV file first.",
+      count === 0
+    );
+  });
+  document.getElementById("clear-uploads").addEventListener("click", () => {
+    localStorage.removeItem(storageKey);
+    for (const input of form.querySelectorAll('input[type="file"]')) {
+      input.value = "";
+      updateName(input.dataset.fileKey, "");
+    }
+    statusMessage("Saved uploads cleared from this browser.");
+  });
+  if (Object.keys(saved).length) {
+    statusMessage(`${Object.keys(saved).length} file(s) are saved in this browser.`);
+  }
 }
 
 function matchesSearch(stock, query) {
@@ -450,7 +530,8 @@ async function startCopiedScreens() {
 
 async function start() {
   try {
-    if (document.body.dataset.view === "dashboard") await startDashboard();
+    if (document.body.dataset.view === "upload") startUploadPage();
+    else if (document.body.dataset.view === "dashboard") await startDashboard();
     else if (document.body.dataset.view === "provisional") await startProvisionalRanking();
     else if (document.body.dataset.view === "copied-screens") await startCopiedScreens();
     else await startScreens();

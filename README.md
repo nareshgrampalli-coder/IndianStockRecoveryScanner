@@ -121,6 +121,12 @@ python dashboard.py
 
 The dashboard uses `screening_results.xlsx` by default. Open `http://127.0.0.1:8000/` for the workbook-backed strategy results, `http://127.0.0.1:8000/dashboard` for the workbook ranking, `http://127.0.0.1:8000/copied-screens` to view the four copied Screener tables, or `http://127.0.0.1:8000/provisional-ranking` for their final provisional ranking. The copied-table views read the four descriptive files from `data\inputs\` (or fall back to matching files in `strategy_results\`) and preserve their pasted columns; empty tables are allowed. The provisional page refreshes its ranking when opened and includes only companies with market capitalization strictly greater than ₹10,000 Cr. Click a provisional score to see its input metrics, component thresholds and weights, missing components, and weighted calculation. Its score uses available quality (25%), quarterly growth (25%), value/dividend yield (20%), payout sustainability (15%), and price correction (15%), renormalized over available components. One-day volume/return and absolute quarterly sales/profit are displayed as context, not scored. This path is separate from the workbook-backed strategy workflow. Verify data freshness before relying on results. Stop the local server with `Ctrl+C`.
 
+## Deploy the uploaded-table dashboard to Vercel
+
+The Vercel deployment opens on a separate upload page. Import this repository in Vercel, keep the project root at the repository root, and deploy; `vercel.json` routes requests to the Python function in `api/index.py`, and Vercel installs dependencies from `requirements.txt`. No CSV/TSV files or workbook need to be committed.
+
+On `/upload`, select a CSV or TSV for each named strategy slot. The browser stores each file locally and sends its contents to the Python function only when the copied-table or provisional-ranking pages request them. Files are private to that browser, are not persisted by Vercel, and must be uploaded again on another browser/device or after clearing site data. The per-file limit is 900 KB and the API request limit is 4 MB. `/copied-screens` shows the supplied tables; `/provisional-ranking` recalculates from them and retains the strict market-cap threshold. The workbook-backed pages are local-only and are not part of this Vercel deployment.
+
 ## Project modules
 
 - `data_sources/` contains NSE Indices and Yahoo Finance providers, the Screener CSV importer, and explicit Dhan, Upstox, and BSE integration boundaries. Dhan/Upstox credentials and BSE disclosure retrieval are not configured.

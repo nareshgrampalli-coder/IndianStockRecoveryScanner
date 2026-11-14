@@ -60,6 +60,12 @@ table { width: 100%; min-width: 900px; border-collapse: collapse; text-align: le
 .score-modal li { padding-left: 4px; }
 .score-rule { color: #526371; font-size: 13px; }
 .secondary-button { border: 1px solid #d5dfe5; border-radius: 6px; padding: 8px 12px; background: #f7f9fa; color: #304554; font: inherit; cursor: pointer; }
+.upload-grid { display: grid; grid-template-columns: repeat(2, minmax(240px, 1fr)); gap: 16px; margin-top: 24px; }
+.upload-card { display: grid; gap: 10px; padding: 18px; border: 1px solid #dfe6ea; border-radius: 8px; background: white; color: #304554; font-weight: 700; }
+.upload-card small, .upload-file-name { color: #71818c; font-size: 12px; font-weight: 400; overflow-wrap: anywhere; }
+.upload-card input { width: 100%; height: auto; min-width: 0; padding: 10px; }
+.upload-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; grid-column: 1 / -1; }
+.upload-submit { border: 0; font: inherit; cursor: pointer; }
 th, td { padding: 13px 15px; border-bottom: 1px solid #edf0f2; white-space: nowrap; }
 th { position: sticky; top: 0; background: #f7f9fa; color: #647684; font-size: 11px; text-transform: uppercase; letter-spacing: .055em; }
 th small { font-size: 10px; text-transform: none; letter-spacing: 0; }
@@ -85,4 +91,6 @@ footer { padding: 22px; border-top: 1px solid #dfe6ea; color: #71818c; text-alig
   .toolbar { align-items: stretch; flex-direction: column; }
   input, select { width: 100%; }
   .metric-grid { grid-template-columns: repeat(2, minmax(130px, 1fr)); }
+  .upload-grid { grid-template-columns: 1fr; }
+  .upload-actions { align-items: stretch; flex-direction: column; }
 }
