@@ -31,11 +31,17 @@ ALIASES = {
         "mar cap rs cr", "market cap rs cr", "market capitalization", "market cap",
     ),
     "pe": ("p e", "stock p e", "pe", "price to earnings"),
+    "dividend_yield": ("div yld", "dividend yield"),
+    "payout_ratio": ("payout ratio", "dividend payout ratio"),
+    "quarterly_net_profit": ("np qtr rs cr", "quarterly net profit"),
+    "quarterly_sales": ("sales qtr rs cr", "quarterly sales"),
     "roce": ("roce", "roce percent"),
     "roe": ("roe", "roe percent"),
     "quarterly_sales_growth": ("qtr sales var", "quarterly sales growth"),
     "quarterly_profit_growth": ("qtr profit var", "quarterly profit growth"),
     "52_week_high": ("52w high rs", "52 week high", "price high 1y"),
+    "daily_volume": ("vol 1d", "volume 1d", "daily volume"),
+    "daily_return_pct": ("1day return", "1 day return", "daily return"),
     "sales_growth": ("sales growth 3years", "sales growth"),
     "profit_growth": ("profit growth 3years", "profit growth"),
     "debt_equity": ("debt to equity", "debt equity"),
@@ -45,16 +51,19 @@ ALIASES = {
     "volume_ratio_20d": ("volume ratio 20d", "volume ratio"),
 }
 NUMERIC_FIELDS = (
-    "market_price", "market_cap", "pe", "roce", "roe",
+    "market_price", "market_cap", "pe", "dividend_yield", "payout_ratio",
+    "quarterly_net_profit", "quarterly_sales", "roce", "roe",
     "quarterly_sales_growth", "quarterly_profit_growth", "52_week_high",
+    "daily_volume", "daily_return_pct",
     "sales_growth", "profit_growth", "debt_equity", "operating_cash_flow",
     "promoter_holding", "rsi14", "volume_ratio_20d",
 )
 WEIGHTS = {
-    "business_quality_score": 30,
-    "quarterly_growth_score": 30,
+    "business_quality_score": 25,
+    "quarterly_growth_score": 25,
     "valuation_score": 20,
-    "price_correction_score": 20,
+    "payout_sustainability_score": 15,
+    "price_correction_score": 15,
 }
 
 
@@ -153,13 +162,24 @@ def _valuation_score(value: float) -> float:
     return 100 if value <= 20 else 75 if value <= 25 else 50 if value <= 35 else 0
 
 
+def _dividend_yield_score(value: float) -> float:
+    if pd.isna(value) or value < 0:
+        return float("nan")
+    return 100 if value >= 5 else 75 if value >= 3 else 50 if value >= 1 else 25 if value > 0 else 50
+
+
+def _payout_sustainability_score(value: float) -> float:
+    if pd.isna(value) or value < 0:
+        return float("nan")
+    return 100 if value <= 60 else 75 if value <= 80 else 50 if value <= 100 else 0
+
+
 def _combine_rows(frame: pd.DataFrame) -> dict:
     names = frame["company"].astype(str).tolist()
     identifiers = {
         field: sorted(set(frame[field].dropna().astype(str).str.strip()))
         for field in ("symbol", "isin")
     }
-    key_fields = ["symbol", "isin"]
     record = {
         "company": max(names, key=lambda value: (len(value), value.casefold())),
         "source_asof": "not provided",
@@ -245,7 +265,21 @@ def build_provisional_ranking(
             ["quarterly_sales_growth_score", "quarterly_profit_growth_score"]
         ].notna().any(axis=1)
     )
-    candidates["valuation_score"] = candidates["pe"].map(_valuation_score)
+    candidates["pe_score"] = candidates["pe"].map(_valuation_score)
+    candidates["dividend_yield_score"] = candidates["dividend_yield"].map(
+        _dividend_yield_score
+    )
+    candidates["valuation_score"] = candidates[
+        ["pe_score", "dividend_yield_score"]
+    ].mean(axis=1, skipna=True).where(
+        candidates[["pe_score", "dividend_yield_score"]].notna().any(axis=1)
+    )
+    candidates["payout_sustainability_score"] = candidates["payout_ratio"].map(
+        _payout_sustainability_score
+    )
+    candidates["quarterly_net_margin_pct"] = (
+        candidates["quarterly_net_profit"] / candidates["quarterly_sales"] * 100
+    ).where(candidates["quarterly_sales"].gt(0))
     drawdown = (1 - candidates["market_price"] / candidates["52_week_high"]) * 100
     candidates["drawdown_pct"] = drawdown.where(
         candidates["52_week_high"].gt(0) & candidates["market_price"].notna()

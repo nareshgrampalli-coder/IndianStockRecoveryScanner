@@ -13,8 +13,9 @@ class ProvisionalRankingTests(unittest.TestCase):
     def test_reads_pasted_tables_merges_companies_and_filters_market_cap(self):
         headers = [
             "S.No.", "Company", "CMP Rs.", "P/E", "Mar Cap Rs.Cr.",
-            "Qtr Profit Var %", "Qtr Sales Var %", "ROCE %", "ROE %",
-            "52w High Rs.",
+            "Div Yld %", "Payout ratio %", "NP Qtr Rs.Cr.",
+            "Qtr Profit Var %", "Sales Qtr Rs.Cr.", "Qtr Sales Var %",
+            "ROCE %", "ROE %", "52w High Rs.", "Vol 1d", "1day return %",
         ]
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
@@ -24,13 +25,13 @@ class ProvisionalRankingTests(unittest.TestCase):
             results_dir.mkdir(parents=True)
 
             pd.DataFrame([
-                ["1.", "Quality Company", 50, 20, 12000, 20, 15, 20, 18, 100],
-                ["2.", "Threshold Company", 50, 20, 10000, 20, 15, 20, 18, 100],
+                ["1.", "Quality Company", 50, 20, 12000, 4, 50, 10, 20, 100, 15, 20, 18, 100, 1500, 2],
+                ["2.", "Threshold Company", 50, 20, 10000, 4, 50, 10, 20, 100, 15, 20, 18, 100, 1500, 2],
             ], columns=headers).to_csv(
                 input_dir / "quality_correction.csv", sep="\t", index=False
             )
             pd.DataFrame([
-                ["1.", "Quality Co.", 52, 22, 12002, 10, 5, 15, 15, 100],
+                ["1.", "Quality Co.", 52, 22, 12002, 3, 60, 11, 10, 101, 5, 15, 15, 100, 1200, 1.5],
             ], columns=headers).to_csv(
                 results_dir / "deep_value_results.csv", sep="\t", index=False
             )
@@ -52,6 +53,15 @@ class ProvisionalRankingTests(unittest.TestCase):
                 "deep_value;quality_correction",
             )
             self.assertEqual(ranking.loc[0, "provisional_component_coverage_pct"], 100)
+            self.assertEqual(ranking.loc[0, "quarterly_net_profit"], 10.5)
+            self.assertEqual(ranking.loc[0, "quarterly_sales"], 100.5)
+            self.assertEqual(ranking.loc[0, "daily_volume"], 1350)
+            self.assertEqual(ranking.loc[0, "daily_return_pct"], 1.75)
+            self.assertEqual(ranking.loc[0, "dividend_yield"], 3.5)
+            self.assertEqual(ranking.loc[0, "payout_ratio"], 55)
+            self.assertAlmostEqual(
+                ranking.loc[0, "quarterly_net_margin_pct"], 10.4478, places=3
+            )
             saved = pd.read_csv(output_path)
             self.assertTrue((saved["market_cap"] > 10000).all())
             self.assertNotIn("Threshold Company", saved["company"].tolist())
