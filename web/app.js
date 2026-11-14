@@ -287,7 +287,13 @@ function renderFinalTable(stocks) {
   }
 }
 
-function renderProvisionalTable(stocks) {
+function provisionalStockKey(stock) {
+  const identifier = safeText(stock.isin || stock.symbol).trim();
+  const value = identifier || safeText(stock.company).trim();
+  return `${identifier ? "id" : "company"}:${value.toLowerCase().replace(/[^a-z0-9]/g, "")}`;
+}
+
+function renderProvisionalTable(stocks, changes = new Map()) {
   const body = document.getElementById("provisional-rows");
   const query = document.getElementById("search").value.trim().toLowerCase();
   const filtered = stocks.filter((stock) =>
@@ -322,16 +328,22 @@ function renderProvisionalTable(stocks) {
       stock.unavailable_components || "—",
       stock.conflicting_source_values || "—",
     ];
-    const leadingValues = [
-      stock.rank ?? "—",
-      stock.company ?? "—",
-    ];
-    for (const value of leadingValues) {
-      const cell = document.createElement("td");
-      cell.textContent = safeText(value);
-      row.append(cell);
+    const change = changes.get(provisionalStockKey(stock));
+    const rankCell = document.createElement("td");
+    rankCell.textContent = safeText(stock.rank ?? "—");
+    if (change?.rank) {
+      rankCell.classList.add("ranking-change");
+      rankCell.title = "Rank changed since the previous refresh";
     }
+    row.append(rankCell);
+    const companyCell = document.createElement("td");
+    companyCell.textContent = safeText(stock.company ?? "—");
+    row.append(companyCell);
     const scoreCell = document.createElement("td");
+    if (change?.score) {
+      scoreCell.classList.add("ranking-change");
+      scoreCell.title = "Provisional score changed since the previous refresh";
+    }
     const scoreLink = document.createElement("button");
     scoreLink.type = "button";
     scoreLink.className = "score-link";
@@ -462,7 +474,28 @@ async function startProvisionalRanking() {
   });
   const refreshButton = document.getElementById("refresh-ranking");
   let stocks = [];
+  let previousSnapshot = null;
+  let changes = new Map();
+  let refreshInProgress = false;
+  let refreshQueued = false;
+  try {
+    const savedSnapshot = sessionStorage.getItem("provisionalRankingSnapshot");
+    previousSnapshot = savedSnapshot ? JSON.parse(savedSnapshot) : null;
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+      statusMessage("Could not read the previous ranking snapshot; change highlighting starts with this refresh.", true);
+    } else if (error instanceof DOMException) {
+      statusMessage("Previous ranking snapshots are unavailable in this browser; changes can only be compared while this page remains open.", true);
+    } else {
+      throw error;
+    }
+  }
   const refreshRanking = async () => {
+    if (refreshInProgress) {
+      refreshQueued = true;
+      return;
+    }
+    refreshInProgress = true;
     refreshButton.disabled = true;
     statusMessage("Refreshing ranking from the files saved in this browser…");
     try {
@@ -474,20 +507,86 @@ async function startProvisionalRanking() {
           `${source.file} (${source.rows} rows)`
         ).join(" · ")}`;
       stocks = result.stocks;
-      renderProvisionalTable(stocks);
-      statusMessage("");
+      const currentSnapshot = Object.fromEntries(stocks.map((stock) => [
+        provisionalStockKey(stock),
+        {
+          rank: stock.rank,
+          score: numericValue(stock.provisional_score) === null
+            ? null
+            : Number(Number(stock.provisional_score).toFixed(2)),
+        },
+      ]));
+      let changedRanks = 0;
+      let changedScores = 0;
+      let newCompanies = 0;
+      changes = new Map();
+      if (previousSnapshot) {
+        for (const stock of stocks) {
+          const key = provisionalStockKey(stock);
+          const previous = previousSnapshot[key];
+          const current = currentSnapshot[key];
+          const rankChanged = previous ? previous.rank !== current.rank : true;
+          const scoreChanged = previous
+            ? previous.score !== current.score
+            : current.score !== null;
+          if (rankChanged) changedRanks++;
+          if (scoreChanged) changedScores++;
+          if (!previous) newCompanies++;
+          if (rankChanged || scoreChanged) {
+            changes.set(key, { rank: rankChanged, score: scoreChanged });
+          }
+        }
+        const removedCompanies = Object.keys(previousSnapshot).filter(
+          (key) => !(key in currentSnapshot)
+        ).length;
+        statusMessage(
+          changedRanks || changedScores || removedCompanies
+            ? `Ranking updated: ${changedRanks} rank changes, ${changedScores} score changes, ${newCompanies} new companies, ${removedCompanies} removed. Changed rank and score cells are highlighted.`
+            : "Ranking refreshed; no rank or score changes."
+        );
+      } else {
+        statusMessage("Ranking loaded. Future rank and score changes will be highlighted.");
+      }
+      renderProvisionalTable(stocks, changes);
+      previousSnapshot = currentSnapshot;
+      try {
+        sessionStorage.setItem(
+          "provisionalRankingSnapshot",
+          JSON.stringify(currentSnapshot)
+        );
+      } catch (error) {
+        if (!(error instanceof DOMException)) throw error;
+        statusMessage("Ranking loaded, but this browser could not save a comparison snapshot; changes may not be highlighted after reload.", true);
+      }
     } finally {
+      refreshInProgress = false;
       refreshButton.disabled = false;
+      if (refreshQueued) {
+        refreshQueued = false;
+        window.setTimeout(() => {
+          refreshRanking().catch((error) => statusMessage(error.message, true));
+        }, 0);
+      }
     }
   };
   document.getElementById("search").addEventListener("input", () =>
-    renderProvisionalTable(stocks)
+    renderProvisionalTable(stocks, changes)
   );
   refreshButton.addEventListener("click", () => {
     refreshRanking().catch((error) => statusMessage(error.message, true));
   });
   window.addEventListener("pageshow", (event) => {
     if (event.persisted) {
+      refreshRanking().catch((error) => statusMessage(error.message, true));
+    }
+  });
+  window.addEventListener("storage", (event) => {
+    if (event.key === "screenerUploads" || event.key === null) {
+      refreshRanking().catch((error) => statusMessage(error.message, true));
+    }
+  });
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
       refreshRanking().catch((error) => statusMessage(error.message, true));
     }
   });
