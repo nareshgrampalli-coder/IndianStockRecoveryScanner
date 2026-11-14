@@ -10,7 +10,9 @@ from urllib.parse import urlparse
 
 import pandas as pd
 
-from data_processing.provisional_ranking import build_provisional_ranking
+from data_processing.provisional_ranking import (
+    build_provisional_ranking, read_copied_screener_screens,
+)
 
 ROOT = Path(__file__).resolve().parent
 WEB_ROOT = ROOT / "web"
@@ -115,6 +117,25 @@ def build_provisional_payload(frame: pd.DataFrame) -> dict:
     }
 
 
+def build_copied_screens_payload(screens: list[dict]) -> dict:
+    records = []
+    for screen in screens:
+        records.append({
+            **{key: value for key, value in screen.items() if key != "rows"},
+            "rows": [
+                {key: json_value(value) for key, value in row.items()}
+                for row in screen["rows"]
+            ],
+        })
+    return {
+        "screens": records,
+        "summary": {
+            "screen_count": len(records),
+            "row_count": sum(len(screen["rows"]) for screen in records),
+        },
+    }
+
+
 class DashboardHandler(BaseHTTPRequestHandler):
     workbook_path = ROOT / "screening_results.xlsx"
     provisional_input_dir = ROOT / "data" / "inputs"
@@ -131,12 +152,16 @@ class DashboardHandler(BaseHTTPRequestHandler):
             self._send_data("dashboard")
         elif route == "/api/provisional-ranking":
             self._send_provisional_data()
+        elif route == "/api/copied-screens":
+            self._send_copied_screens()
         elif route in {"/", "/screens"}:
             self._send_file(WEB_ROOT / "index.html")
         elif route == "/dashboard":
             self._send_file(WEB_ROOT / "dashboard.html")
         elif route == "/provisional-ranking":
             self._send_file(WEB_ROOT / "provisional.html")
+        elif route == "/copied-screens":
+            self._send_file(WEB_ROOT / "copied-screens.html")
         elif route in {"/app.js", "/styles.css"}:
             self._send_file(WEB_ROOT / route.lstrip("/"))
         else:
@@ -150,6 +175,16 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 self.provisional_ranking_path,
             )
             self._send_json(build_provisional_payload(frame))
+        except (OSError, ValueError, KeyError) as exc:
+            self._send_json({"error": str(exc)}, status=503)
+
+    def _send_copied_screens(self):
+        try:
+            screens = read_copied_screener_screens(
+                self.provisional_input_dir,
+                self.provisional_result_dir,
+            )
+            self._send_json(build_copied_screens_payload(screens))
         except (OSError, ValueError, KeyError) as exc:
             self._send_json({"error": str(exc)}, status=503)
 

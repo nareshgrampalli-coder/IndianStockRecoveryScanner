@@ -223,10 +223,69 @@ async function startProvisionalRanking() {
   statusMessage("");
 }
 
+function renderCopiedScreen(screen) {
+  const head = document.getElementById("copied-headers");
+  const body = document.getElementById("copied-rows");
+  const query = document.getElementById("search").value.trim().toLowerCase();
+  head.replaceChildren();
+  body.replaceChildren();
+  for (const column of screen.columns) {
+    const cell = document.createElement("th");
+    cell.textContent = column;
+    head.append(cell);
+  }
+  const filtered = screen.rows.filter((row) =>
+    Object.values(row).some((value) => safeText(value).toLowerCase().includes(query))
+  );
+  for (const record of filtered) {
+    const row = document.createElement("tr");
+    for (const column of screen.columns) {
+      const cell = document.createElement("td");
+      cell.textContent = safeText(record[column] ?? "—");
+      row.append(cell);
+    }
+    body.append(row);
+  }
+  document.getElementById("screen-source").textContent =
+    `${screen.source_file} · ${screen.rows.length} copied rows`;
+  document.getElementById("result-count").textContent =
+    `${filtered.length} of ${screen.rows.length} rows`;
+  if (screen.rows.length === 0) {
+    statusMessage("This Screener table is empty; the other strategy screens remain available.");
+  } else if (filtered.length === 0) {
+    statusMessage("No rows in this screen match the search.");
+  } else {
+    statusMessage("");
+  }
+}
+
+async function startCopiedScreens() {
+  const result = await getJson("/api/copied-screens");
+  const select = document.getElementById("screen-select");
+  const search = document.getElementById("search");
+  select.replaceChildren();
+  for (const [index, screen] of result.screens.entries()) {
+    const option = document.createElement("option");
+    option.value = String(index);
+    option.textContent = `${screen.title} (${screen.rows.length})`;
+    select.append(option);
+  }
+  const render = () => {
+    const screen = result.screens[Number(select.value)];
+    if (screen) renderCopiedScreen(screen);
+  };
+  select.addEventListener("change", render);
+  search.addEventListener("input", render);
+  document.getElementById("copied-summary").textContent =
+    `${result.summary.screen_count} strategy screens · ${result.summary.row_count} copied rows`;
+  render();
+}
+
 async function start() {
   try {
     if (document.body.dataset.view === "dashboard") await startDashboard();
     else if (document.body.dataset.view === "provisional") await startProvisionalRanking();
+    else if (document.body.dataset.view === "copied-screens") await startCopiedScreens();
     else await startScreens();
   } catch (error) {
     statusMessage(error.message, true);

@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Copied Screener Tables</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body data-view="copied-screens">
+  <header class="topbar">
+    <a class="brand" href="/">Indian Stock Recovery Scanner</a>
+    <nav aria-label="Main navigation">
+      <a href="/">Four strategy screens</a>
+      <a href="/dashboard">Final dashboard</a>
+      <a href="/provisional-ranking">Provisional ranking</a>
+      <a class="active" href="/copied-screens">Copied Screener tables</a>
+    </nav>
+  </header>
+  <main>
+    <section class="page-heading">
+      <div>
+        <p class="eyebrow">SCREENER.IN · COPIED TABLES</p>
+        <h1>Four strategy screens</h1>
+        <p id="copied-summary">Loading copied Screener tables…</p>
+      </div>
+      <a class="button-link" href="/provisional-ranking">Open final provisional ranking <span aria-hidden="true">→</span></a>
+    </section>
+    <section class="notice">
+      <strong>Copied source data</strong>
+      <span>These tables display the values copied from Screener without re-evaluating the query rules. Empty screens are allowed. The final provisional ranking combines available fields and includes only companies with market cap above ₹10,000 Cr.</span>
+    </section>
+    <section class="toolbar" aria-label="Copied table controls">
+      <label>Strategy screen
+        <select id="screen-select"></select>
+      </label>
+      <label class="search-wrap">Search this screen
+        <input id="search" type="search" placeholder="Company or value">
+      </label>
+      <span id="screen-source" class="muted"></span>
+      <span id="result-count" class="muted"></span>
+    </section>
+    <div id="status" class="status" role="status">Loading copied Screener tables…</div>
+    <section class="table-wrap">
+      <table class="wide-table">
+        <thead><tr id="copied-headers"></tr></thead>
+        <tbody id="copied-rows"></tbody>
+      </table>
+    </section>
+  </main>
+  <footer>Copied Screener values are presented as supplied · Verify data freshness before relying on results.</footer>
+</body>
+</html>

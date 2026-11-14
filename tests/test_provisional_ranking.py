@@ -4,7 +4,9 @@ from pathlib import Path
 
 import pandas as pd
 
-from data_processing.provisional_ranking import build_provisional_ranking
+from data_processing.provisional_ranking import (
+    build_provisional_ranking, read_copied_screener_screens,
+)
 
 
 class ProvisionalRankingTests(unittest.TestCase):
@@ -81,12 +83,22 @@ class ProvisionalRankingTests(unittest.TestCase):
                     index=False,
                 )
 
+            screens = read_copied_screener_screens(input_dir, results_dir)
             ranking = build_provisional_ranking(
                 input_dir,
                 results_dir,
                 root / "partial_analysis" / "ranking.csv",
             )
 
+        self.assertEqual(
+            [screen["title"] for screen in screens],
+            [
+                "Quality Correction", "Deep Value",
+                "Recovery 30-50", "Technical Reversal",
+            ],
+        )
+        self.assertEqual([len(screen["rows"]) for screen in screens], [1, 0, 0, 0])
+        self.assertIn("Company", screens[0]["columns"])
         self.assertEqual(ranking["company"].tolist(), ["Quality Company"])
 
 

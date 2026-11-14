@@ -16,6 +16,12 @@ STRATEGY_SOURCES = {
     "recovery_30_50": ("recovery_30_50.csv", "recovery_30_50_results.csv"),
     "technical_reversal": ("technical_reversal.csv", "technical_reversal_results.csv"),
 }
+STRATEGY_TITLES = {
+    "quality_correction": "Quality Correction",
+    "deep_value": "Deep Value",
+    "recovery_30_50": "Recovery 30-50",
+    "technical_reversal": "Technical Reversal",
+}
 ALIASES = {
     "company": ("company", "company name", "name", "stock"),
     "symbol": ("symbol", "nse symbol", "ticker"),
@@ -60,18 +66,9 @@ def _company_key(value: str) -> str:
 
 
 def _read_table(path: Path) -> pd.DataFrame:
-    if not path.is_file():
-        raise FileNotFoundError(f"Screener table not found: {path}")
-    if path.stat().st_size == 0:
-        return _empty_table(path)
-    try:
-        frame = pd.read_csv(path, sep=None, engine="python", encoding="utf-8-sig")
-    except pd.errors.EmptyDataError:
-        return _empty_table(path)
-    except pd.errors.ParserError as exc:
-        raise ValueError(f"Could not parse copied Screener table: {path}: {exc}") from exc
+    frame = _read_raw_table(path)
     if frame.empty and len(frame.columns) == 0:
-        raise ValueError(f"Screener table has no headers: {path}")
+        return _empty_table(path)
 
     normalized = {normalize_header(column): column for column in frame.columns}
     columns = {}
@@ -97,11 +94,51 @@ def _read_table(path: Path) -> pd.DataFrame:
     return rows
 
 
+def _read_raw_table(path: Path) -> pd.DataFrame:
+    if not path.is_file():
+        raise FileNotFoundError(f"Screener table not found: {path}")
+    if path.stat().st_size == 0:
+        return pd.DataFrame()
+    try:
+        frame = pd.read_csv(path, sep=None, engine="python", encoding="utf-8-sig")
+    except pd.errors.EmptyDataError:
+        return pd.DataFrame()
+    except pd.errors.ParserError as exc:
+        raise ValueError(f"Could not parse copied Screener table: {path}: {exc}") from exc
+    return frame
+
+
 def _empty_table(path: Path) -> pd.DataFrame:
     columns = ["company", "symbol", "isin", *NUMERIC_FIELDS, "source_file"]
     frame = pd.DataFrame(columns=columns)
     frame["source_file"] = path.name
     return frame
+
+
+def _source_path(input_dir: Path, result_dir: Path, strategy: str) -> Path:
+    input_name, result_name = STRATEGY_SOURCES[strategy]
+    preferred = input_dir / input_name
+    fallback = result_dir / result_name
+    return preferred if preferred.is_file() and preferred.stat().st_size else fallback
+
+
+def read_copied_screener_screens(
+    input_dir: str | Path, result_dir: str | Path
+) -> list[dict]:
+    """Return all four copied Screener tables for display without changing their rows."""
+    input_dir, result_dir = Path(input_dir), Path(result_dir)
+    screens = []
+    for strategy in STRATEGY_SOURCES:
+        source = _source_path(input_dir, result_dir, strategy)
+        frame = _read_raw_table(source)
+        screens.append({
+            "strategy": strategy,
+            "title": STRATEGY_TITLES[strategy],
+            "source_file": source.name,
+            "columns": [str(column) for column in frame.columns],
+            "rows": frame.to_dict(orient="records"),
+        })
+    return screens
 
 
 def _score_band(value: float, top: float, middle: float, low: float) -> float:
@@ -154,10 +191,8 @@ def build_provisional_ranking(
     """Read copied Screener tables and write the above-threshold provisional ranking."""
     input_dir, result_dir, output_path = Path(input_dir), Path(result_dir), Path(output_path)
     source_frames = []
-    for strategy, (input_name, result_name) in STRATEGY_SOURCES.items():
-        preferred = input_dir / input_name
-        fallback = result_dir / result_name
-        source = preferred if preferred.is_file() and preferred.stat().st_size else fallback
+    for strategy in STRATEGY_SOURCES:
+        source = _source_path(input_dir, result_dir, strategy)
         frame = _read_table(source)
         frame["source_strategy"] = strategy
         source_frames.append(frame)
